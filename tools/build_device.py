@@ -97,14 +97,11 @@ def param(longname, shortname, ptype, **v):
     return {"valueof": valueof}
 
 
-DIAL_COLORS = {
-    "activedialcolor": WHITE,
-    "dialcolor": white(0.16),
-    "activeneedlecolor": WHITE,
-    "needlecolor": white(0.6),
-    "textcolor": white(0.8),
-    "panelcolor": BLACK,
-}
+# el live.dial es invisible: lo dibuja midirain_knob.js encima
+CLEAR = [0.0, 0.0, 0.0, 0.0]
+DIAL_COLORS = {k: CLEAR for k in (
+    "activedialcolor", "dialcolor", "activeneedlecolor", "needlecolor",
+    "textcolor", "panelcolor", "tricolor", "focusbordercolor")}
 TAB_COLORS = {
     "bgcolor": BLACK,
     "activebgcolor": BLACK,
@@ -133,14 +130,28 @@ NUMBOX_COLORS = {
 }
 
 
-def dial(key, varname, longname, rect, pres, mmin, mmax, initial, unitstyle, exponent=None):
+KNOB_W, KNOB_H = 52, 50
+_knobs = []
+
+
+def dial(key, varname, longname, label, x, y, mmin, mmax, initial, unitstyle, exponent=None, unit=None):
+    """live.dial transparente (ratón, automatización, MIDI map) con un jsui encima
+    que lo dibuja (midirain_knob.js, ignoreclick)."""
     v = dict(mmin=float(mmin), mmax=float(mmax), initial=[float(initial)], unitstyle=unitstyle)
     if exponent:
         v["exponent"] = float(exponent)
-    attrs = dict(DIAL_COLORS)
-    return box(key, "live.dial", rect, 1, 2, ["", "float"], pres=pres,
-               parameter_enable=1, varname=varname, showname=0, shownumber=1,
-               saved_attribute_attributes=param(longname, longname, 0, **v), **attrs)
+    pres = [x, y, KNOB_W, KNOB_H]
+    i = len(_knobs)
+    box(key, "live.dial", [20 + i * 60, 40, KNOB_W, KNOB_H], 1, 2, ["", "float"], pres=pres,
+        parameter_enable=1, varname=varname, showname=0, shownumber=0,
+        saved_attribute_attributes=param(longname, longname, 0, **v), **DIAL_COLORS)
+    args = [label, mmin, mmax, exponent or 1, initial] + ([unit] if unit else [])
+    kkey = "knob_" + key
+    box(kkey, "jsui", [820 + i * 60, 40, KNOB_W, KNOB_H], 1, 0, pres=pres,
+        filename="midirain_knob.js", jsarguments=args, ignoreclick=1, parameter_enable=0)
+    _knobs.append(key)
+    wire(key, kkey)
+    return key
 
 
 def menu(key, varname, longname, items, initial, rect, pres):
@@ -183,20 +194,16 @@ X3, X4 = 428, 482          # columna de menús
 
 CONTROLS = []              # (clave del control, selector del motor)
 
-comment("l_density", "densidad", [20, 20, 60, 18], pres=[X1 - 2, 4, 52, 14])
-dial("density", "density", "Densidad", [20, 40, 44, 36], [X1, 16, 44, 36], 0, 100, 30, 5)
+dial("density", "density", "Densidad", "densidad", X1 - 4, 4, 0, 100, 30, 5, unit="%")
 CONTROLS.append(("density", "density"))
 
-comment("l_fall", "caída", [80, 20, 60, 18], pres=[X2 - 2, 4, 52, 14])
-dial("fall", "fall", "Caída", [80, 40, 44, 36], [X2, 16, 44, 36], 0, 100, 40, 5)
+dial("fall", "fall", "Caída", "caída", X2 - 4, 4, 0, 100, 40, 5, unit="%")
 CONTROLS.append(("fall", "fall"))
 
-comment("l_wind", "viento", [140, 20, 60, 18], pres=[X1 - 2, 58, 52, 14])
-dial("wind", "wind", "Viento", [140, 40, 44, 36], [X1, 70, 44, 36], -100, 100, 0, 0)
+dial("wind", "wind", "Viento", "viento", X1 - 4, 58, -100, 100, 0, 0)
 CONTROLS.append(("wind", "wind"))
 
-comment("l_dur", "duración", [200, 20, 60, 18], pres=[X2 - 2, 58, 56, 14])
-dial("dur", "dur", "Duración", [200, 40, 44, 36], [X2, 70, 44, 36], 10, 2000, 150, 2, exponent=3)
+dial("dur", "dur", "Duración", "duración", X2 - 4, 58, 10, 2000, 150, 2, exponent=3, unit="ms")
 CONTROLS.append(("dur", "dur"))
 
 comment("l_mode", "modo", [260, 20, 60, 18], pres=[X1 - 2, 114, 52, 14])

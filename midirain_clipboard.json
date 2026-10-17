@@ -91,44 +91,14 @@
 		{
 			"box": {
 				"id": "obj-4",
-				"maxclass": "comment",
-				"numinlets": 1,
-				"numoutlets": 0,
-				"patching_rect": [
-					20.0,
-					20.0,
-					60.0,
-					18.0
-				],
-				"text": "densidad",
-				"presentation": 1,
-				"presentation_rect": [
-					312.0,
-					4.0,
-					52.0,
-					14.0
-				],
-				"fontname": "Space Mono",
-				"fontsize": 9.0,
-				"textcolor": [
-					1.0,
-					1.0,
-					1.0,
-					0.5
-				]
-			}
-		},
-		{
-			"box": {
-				"id": "obj-5",
 				"maxclass": "live.dial",
 				"numinlets": 1,
 				"numoutlets": 2,
 				"patching_rect": [
 					20.0,
 					40.0,
-					44.0,
-					36.0
+					52.0,
+					50.0
 				],
 				"outlettype": [
 					"",
@@ -136,15 +106,15 @@
 				],
 				"presentation": 1,
 				"presentation_rect": [
-					314.0,
-					16.0,
-					44.0,
-					36.0
+					310.0,
+					4.0,
+					52.0,
+					50.0
 				],
 				"parameter_enable": 1,
 				"varname": "density",
 				"showname": 0,
-				"shownumber": 1,
+				"shownumber": 0,
 				"saved_attribute_attributes": {
 					"valueof": {
 						"parameter_longname": "Densidad",
@@ -160,84 +130,98 @@
 					}
 				},
 				"activedialcolor": [
-					1.0,
-					1.0,
-					1.0,
-					1.0
+					0.0,
+					0.0,
+					0.0,
+					0.0
 				],
 				"dialcolor": [
-					1.0,
-					1.0,
-					1.0,
-					0.16
+					0.0,
+					0.0,
+					0.0,
+					0.0
 				],
 				"activeneedlecolor": [
-					1.0,
-					1.0,
-					1.0,
-					1.0
+					0.0,
+					0.0,
+					0.0,
+					0.0
 				],
 				"needlecolor": [
-					1.0,
-					1.0,
-					1.0,
-					0.6
+					0.0,
+					0.0,
+					0.0,
+					0.0
 				],
 				"textcolor": [
-					1.0,
-					1.0,
-					1.0,
-					0.8
+					0.0,
+					0.0,
+					0.0,
+					0.0
 				],
 				"panelcolor": [
 					0.0,
 					0.0,
 					0.0,
-					1.0
+					0.0
+				],
+				"tricolor": [
+					0.0,
+					0.0,
+					0.0,
+					0.0
+				],
+				"focusbordercolor": [
+					0.0,
+					0.0,
+					0.0,
+					0.0
 				]
+			}
+		},
+		{
+			"box": {
+				"id": "obj-5",
+				"maxclass": "jsui",
+				"numinlets": 1,
+				"numoutlets": 0,
+				"patching_rect": [
+					820.0,
+					40.0,
+					52.0,
+					50.0
+				],
+				"presentation": 1,
+				"presentation_rect": [
+					310.0,
+					4.0,
+					52.0,
+					50.0
+				],
+				"filename": "midirain_knob.js",
+				"jsarguments": [
+					"densidad",
+					0,
+					100,
+					1,
+					30,
+					"%"
+				],
+				"ignoreclick": 1,
+				"parameter_enable": 0
 			}
 		},
 		{
 			"box": {
 				"id": "obj-6",
-				"maxclass": "comment",
-				"numinlets": 1,
-				"numoutlets": 0,
-				"patching_rect": [
-					80.0,
-					20.0,
-					60.0,
-					18.0
-				],
-				"text": "caída",
-				"presentation": 1,
-				"presentation_rect": [
-					364.0,
-					4.0,
-					52.0,
-					14.0
-				],
-				"fontname": "Space Mono",
-				"fontsize": 9.0,
-				"textcolor": [
-					1.0,
-					1.0,
-					1.0,
-					0.5
-				]
-			}
-		},
-		{
-			"box": {
-				"id": "obj-7",
 				"maxclass": "live.dial",
 				"numinlets": 1,
 				"numoutlets": 2,
 				"patching_rect": [
 					80.0,
 					40.0,
-					44.0,
-					36.0
+					52.0,
+					50.0
 				],
 				"outlettype": [
 					"",
@@ -245,15 +229,15 @@
 				],
 				"presentation": 1,
 				"presentation_rect": [
-					366.0,
-					16.0,
-					44.0,
-					36.0
+					362.0,
+					4.0,
+					52.0,
+					50.0
 				],
 				"parameter_enable": 1,
 				"varname": "fall",
 				"showname": 0,
-				"shownumber": 1,
+				"shownumber": 0,
 				"saved_attribute_attributes": {
 					"valueof": {
 						"parameter_longname": "Caída",
@@ -269,84 +253,98 @@
 					}
 				},
 				"activedialcolor": [
-					1.0,
-					1.0,
-					1.0,
-					1.0
+					0.0,
+					0.0,
+					0.0,
+					0.0
 				],
 				"dialcolor": [
-					1.0,
-					1.0,
-					1.0,
-					0.16
+					0.0,
+					0.0,
+					0.0,
+					0.0
 				],
 				"activeneedlecolor": [
-					1.0,
-					1.0,
-					1.0,
-					1.0
+					0.0,
+					0.0,
+					0.0,
+					0.0
 				],
 				"needlecolor": [
-					1.0,
-					1.0,
-					1.0,
-					0.6
+					0.0,
+					0.0,
+					0.0,
+					0.0
 				],
 				"textcolor": [
-					1.0,
-					1.0,
-					1.0,
-					0.8
+					0.0,
+					0.0,
+					0.0,
+					0.0
 				],
 				"panelcolor": [
 					0.0,
 					0.0,
 					0.0,
-					1.0
+					0.0
+				],
+				"tricolor": [
+					0.0,
+					0.0,
+					0.0,
+					0.0
+				],
+				"focusbordercolor": [
+					0.0,
+					0.0,
+					0.0,
+					0.0
 				]
+			}
+		},
+		{
+			"box": {
+				"id": "obj-7",
+				"maxclass": "jsui",
+				"numinlets": 1,
+				"numoutlets": 0,
+				"patching_rect": [
+					880.0,
+					40.0,
+					52.0,
+					50.0
+				],
+				"presentation": 1,
+				"presentation_rect": [
+					362.0,
+					4.0,
+					52.0,
+					50.0
+				],
+				"filename": "midirain_knob.js",
+				"jsarguments": [
+					"caída",
+					0,
+					100,
+					1,
+					40,
+					"%"
+				],
+				"ignoreclick": 1,
+				"parameter_enable": 0
 			}
 		},
 		{
 			"box": {
 				"id": "obj-8",
-				"maxclass": "comment",
-				"numinlets": 1,
-				"numoutlets": 0,
-				"patching_rect": [
-					140.0,
-					20.0,
-					60.0,
-					18.0
-				],
-				"text": "viento",
-				"presentation": 1,
-				"presentation_rect": [
-					312.0,
-					58.0,
-					52.0,
-					14.0
-				],
-				"fontname": "Space Mono",
-				"fontsize": 9.0,
-				"textcolor": [
-					1.0,
-					1.0,
-					1.0,
-					0.5
-				]
-			}
-		},
-		{
-			"box": {
-				"id": "obj-9",
 				"maxclass": "live.dial",
 				"numinlets": 1,
 				"numoutlets": 2,
 				"patching_rect": [
 					140.0,
 					40.0,
-					44.0,
-					36.0
+					52.0,
+					50.0
 				],
 				"outlettype": [
 					"",
@@ -354,15 +352,15 @@
 				],
 				"presentation": 1,
 				"presentation_rect": [
-					314.0,
-					70.0,
-					44.0,
-					36.0
+					310.0,
+					58.0,
+					52.0,
+					50.0
 				],
 				"parameter_enable": 1,
 				"varname": "wind",
 				"showname": 0,
-				"shownumber": 1,
+				"shownumber": 0,
 				"saved_attribute_attributes": {
 					"valueof": {
 						"parameter_longname": "Viento",
@@ -378,84 +376,97 @@
 					}
 				},
 				"activedialcolor": [
-					1.0,
-					1.0,
-					1.0,
-					1.0
+					0.0,
+					0.0,
+					0.0,
+					0.0
 				],
 				"dialcolor": [
-					1.0,
-					1.0,
-					1.0,
-					0.16
+					0.0,
+					0.0,
+					0.0,
+					0.0
 				],
 				"activeneedlecolor": [
-					1.0,
-					1.0,
-					1.0,
-					1.0
+					0.0,
+					0.0,
+					0.0,
+					0.0
 				],
 				"needlecolor": [
-					1.0,
-					1.0,
-					1.0,
-					0.6
+					0.0,
+					0.0,
+					0.0,
+					0.0
 				],
 				"textcolor": [
-					1.0,
-					1.0,
-					1.0,
-					0.8
+					0.0,
+					0.0,
+					0.0,
+					0.0
 				],
 				"panelcolor": [
 					0.0,
 					0.0,
 					0.0,
-					1.0
+					0.0
+				],
+				"tricolor": [
+					0.0,
+					0.0,
+					0.0,
+					0.0
+				],
+				"focusbordercolor": [
+					0.0,
+					0.0,
+					0.0,
+					0.0
 				]
+			}
+		},
+		{
+			"box": {
+				"id": "obj-9",
+				"maxclass": "jsui",
+				"numinlets": 1,
+				"numoutlets": 0,
+				"patching_rect": [
+					940.0,
+					40.0,
+					52.0,
+					50.0
+				],
+				"presentation": 1,
+				"presentation_rect": [
+					310.0,
+					58.0,
+					52.0,
+					50.0
+				],
+				"filename": "midirain_knob.js",
+				"jsarguments": [
+					"viento",
+					-100,
+					100,
+					1,
+					0
+				],
+				"ignoreclick": 1,
+				"parameter_enable": 0
 			}
 		},
 		{
 			"box": {
 				"id": "obj-10",
-				"maxclass": "comment",
-				"numinlets": 1,
-				"numoutlets": 0,
-				"patching_rect": [
-					200.0,
-					20.0,
-					60.0,
-					18.0
-				],
-				"text": "duración",
-				"presentation": 1,
-				"presentation_rect": [
-					364.0,
-					58.0,
-					56.0,
-					14.0
-				],
-				"fontname": "Space Mono",
-				"fontsize": 9.0,
-				"textcolor": [
-					1.0,
-					1.0,
-					1.0,
-					0.5
-				]
-			}
-		},
-		{
-			"box": {
-				"id": "obj-11",
 				"maxclass": "live.dial",
 				"numinlets": 1,
 				"numoutlets": 2,
 				"patching_rect": [
 					200.0,
 					40.0,
-					44.0,
-					36.0
+					52.0,
+					50.0
 				],
 				"outlettype": [
 					"",
@@ -463,15 +474,15 @@
 				],
 				"presentation": 1,
 				"presentation_rect": [
-					366.0,
-					70.0,
-					44.0,
-					36.0
+					362.0,
+					58.0,
+					52.0,
+					50.0
 				],
 				"parameter_enable": 1,
 				"varname": "dur",
 				"showname": 0,
-				"shownumber": 1,
+				"shownumber": 0,
 				"saved_attribute_attributes": {
 					"valueof": {
 						"parameter_longname": "Duración",
@@ -488,41 +499,85 @@
 					}
 				},
 				"activedialcolor": [
-					1.0,
-					1.0,
-					1.0,
-					1.0
+					0.0,
+					0.0,
+					0.0,
+					0.0
 				],
 				"dialcolor": [
-					1.0,
-					1.0,
-					1.0,
-					0.16
+					0.0,
+					0.0,
+					0.0,
+					0.0
 				],
 				"activeneedlecolor": [
-					1.0,
-					1.0,
-					1.0,
-					1.0
+					0.0,
+					0.0,
+					0.0,
+					0.0
 				],
 				"needlecolor": [
-					1.0,
-					1.0,
-					1.0,
-					0.6
+					0.0,
+					0.0,
+					0.0,
+					0.0
 				],
 				"textcolor": [
-					1.0,
-					1.0,
-					1.0,
-					0.8
+					0.0,
+					0.0,
+					0.0,
+					0.0
 				],
 				"panelcolor": [
 					0.0,
 					0.0,
 					0.0,
-					1.0
+					0.0
+				],
+				"tricolor": [
+					0.0,
+					0.0,
+					0.0,
+					0.0
+				],
+				"focusbordercolor": [
+					0.0,
+					0.0,
+					0.0,
+					0.0
 				]
+			}
+		},
+		{
+			"box": {
+				"id": "obj-11",
+				"maxclass": "jsui",
+				"numinlets": 1,
+				"numoutlets": 0,
+				"patching_rect": [
+					1000.0,
+					40.0,
+					52.0,
+					50.0
+				],
+				"presentation": 1,
+				"presentation_rect": [
+					362.0,
+					58.0,
+					52.0,
+					50.0
+				],
+				"filename": "midirain_knob.js",
+				"jsarguments": [
+					"duración",
+					10,
+					2000,
+					3,
+					150,
+					"ms"
+				],
+				"ignoreclick": 1,
+				"parameter_enable": 0
 			}
 		},
 		{
@@ -1946,7 +2001,55 @@
 		{
 			"patchline": {
 				"source": [
+					"obj-4",
+					0
+				],
+				"destination": [
 					"obj-5",
+					0
+				]
+			}
+		},
+		{
+			"patchline": {
+				"source": [
+					"obj-6",
+					0
+				],
+				"destination": [
+					"obj-7",
+					0
+				]
+			}
+		},
+		{
+			"patchline": {
+				"source": [
+					"obj-8",
+					0
+				],
+				"destination": [
+					"obj-9",
+					0
+				]
+			}
+		},
+		{
+			"patchline": {
+				"source": [
+					"obj-10",
+					0
+				],
+				"destination": [
+					"obj-11",
+					0
+				]
+			}
+		},
+		{
+			"patchline": {
+				"source": [
+					"obj-4",
 					0
 				],
 				"destination": [
@@ -1958,7 +2061,7 @@
 		{
 			"patchline": {
 				"source": [
-					"obj-7",
+					"obj-6",
 					0
 				],
 				"destination": [
@@ -1970,7 +2073,7 @@
 		{
 			"patchline": {
 				"source": [
-					"obj-9",
+					"obj-8",
 					0
 				],
 				"destination": [
@@ -1982,7 +2085,7 @@
 		{
 			"patchline": {
 				"source": [
-					"obj-11",
+					"obj-10",
 					0
 				],
 				"destination": [
@@ -2082,7 +2185,7 @@
 					1
 				],
 				"destination": [
-					"obj-5",
+					"obj-4",
 					0
 				]
 			}
@@ -2094,7 +2197,7 @@
 					1
 				],
 				"destination": [
-					"obj-7",
+					"obj-6",
 					0
 				]
 			}
@@ -2106,7 +2209,7 @@
 					1
 				],
 				"destination": [
-					"obj-9",
+					"obj-8",
 					0
 				]
 			}
@@ -2118,7 +2221,7 @@
 					1
 				],
 				"destination": [
-					"obj-11",
+					"obj-10",
 					0
 				]
 			}

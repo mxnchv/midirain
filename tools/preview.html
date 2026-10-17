@@ -15,8 +15,9 @@
          min-height: 100vh; display: grid; place-items: center; padding: 16px; }
   .device { display: flex; border: 1px solid #1c1c1c; max-width: 100%; }
   canvas { display: block; width: 300px; height: 169px; border-right: 1px solid #1c1c1c; }
-  .ctl { width: 280px; height: 169px; padding: 8px 12px; display: grid; grid-template-columns: 1fr 1fr;
+  .ctl { width: 280px; min-height: 169px; padding: 8px 12px; display: grid; grid-template-columns: 1fr 1fr;
          gap: 4px 12px; font-size: 9px; color: rgba(255,255,255,0.5); align-content: start; }
+  .knobs { grid-column: 1 / -1; display: flex; gap: 12px; }
   label { display: flex; flex-direction: column; gap: 2px; }
   input[type=range] { accent-color: #fff; width: 100%; }
   select, input[type=number] { background: #000; color: #fff; border: 1px solid rgba(255,255,255,0.35);
@@ -36,50 +37,66 @@
 (async function () {
   var W = 300, H = 169, DPR = 2;
   var cv = document.getElementById('c');
-  var g = cv.getContext('2d');
   var globals = {};
   function Global(name) { return globals[name] || (globals[name] = {}); }
 
-  // mgraphics sobre canvas 2D (subconjunto que usa midirain_ui.js)
-  var font = { face: 'Space Mono', size: 8 };
-  var mg = {
-    relative_coords: 0, autofill: 0, size: [W, H],
-    init: function () {}, redraw: function () { dirty = true; },
-    set_source_rgba: function (r, gg, b, a) { var c = 'rgba(' + (r * 255 | 0) + ',' + (gg * 255 | 0) + ',' + (b * 255 | 0) + ',' + a + ')'; g.fillStyle = c; g.strokeStyle = c; },
-    pattern_create_linear: function (x1, y1, x2, y2) {
-      var gr = g.createLinearGradient(x1, y1, x2, y2);
-      return { add_color_stop_rgba: function (o, r, gg, b, a) { gr.addColorStop(o, 'rgba(' + (r * 255 | 0) + ',' + (gg * 255 | 0) + ',' + (b * 255 | 0) + ',' + a + ')'); }, _g: gr };
-    },
-    rectangle: function (x, y, w, h) { g.rect(x, y, w, h); },
-    ellipse: function (x, y, w, h) { g.moveTo(x + w, y + h / 2); g.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2); },
-    move_to: function (x, y) { g.moveTo(x, y); }, line_to: function (x, y) { g.lineTo(x, y); },
-    arc: function (x, y, r, a1, a2) { g.arc(x, y, r, a1, a2); },
-    fill: function () { g.fill(); g.beginPath(); }, stroke: function () { g.stroke(); g.beginPath(); },
-    save: function () { g.save(); }, restore: function () { g.restore(); },
-    translate: function (x, y) { g.translate(x, y); }, scale: function (x, y) { g.scale(x, y); },
-    set_line_width: function (w) { g.lineWidth = w; }, set_line_cap: function (c) { g.lineCap = c; },
-    select_font_face: function (f) { font.face = f; g.font = font.size + 'px "' + font.face + '"'; },
-    set_font_size: function (s) { font.size = s; g.font = font.size + 'px "' + font.face + '"'; },
-    text_measure: function (s) { return [g.measureText(s).width, font.size]; }
-  };
-  // show_text dibuja en el punto actual: lo guardamos en move_to
-  var pt = [0, 0];
-  var mt = mg.move_to; mg.move_to = function (x, y) { pt = [x, y]; mt(x, y); };
-  mg.show_text = function (s) { g.fillText(s, pt[0], pt[1]); pt[0] += g.measureText(s).width; };
-  mg.set_source = function (p) { g.fillStyle = p._g; g.strokeStyle = p._g; };
+  // mgraphics sobre canvas 2D (subconjunto que usan los jsui de midirain)
+  function rgba(r, gg, b, a) { return 'rgba(' + (r * 255 | 0) + ',' + (gg * 255 | 0) + ',' + (b * 255 | 0) + ',' + a + ')'; }
+  function makeMg(canvas, w, h) {
+    var g = canvas.getContext('2d');
+    var font = { face: 'Space Mono', size: 8 };
+    var pt = [0, 0];
+    function setFont() { g.font = font.size + 'px "' + font.face + '"'; }
+    var mg = {
+      relative_coords: 0, autofill: 0, size: [w, h], dirty: true,
+      init: function () {}, redraw: function () { mg.dirty = true; },
+      set_source_rgba: function (r, gg, b, a) { g.fillStyle = g.strokeStyle = rgba(r, gg, b, a); },
+      set_source: function (p) { g.fillStyle = g.strokeStyle = p._g; },
+      pattern_create_linear: function (x1, y1, x2, y2) { return grad(g.createLinearGradient(x1, y1, x2, y2)); },
+      pattern_create_radial: function (x1, y1, r1, x2, y2, r2) { return grad(g.createRadialGradient(x1, y1, r1, x2, y2, r2)); },
+      rectangle: function (x, y, ww, hh) { g.rect(x, y, ww, hh); },
+      ellipse: function (x, y, ww, hh) { g.moveTo(x + ww, y + hh / 2); g.ellipse(x + ww / 2, y + hh / 2, ww / 2, hh / 2, 0, 0, Math.PI * 2); },
+      move_to: function (x, y) { pt = [x, y]; g.moveTo(x, y); }, line_to: function (x, y) { g.lineTo(x, y); },
+      arc: function (x, y, r, a1, a2) { g.arc(x, y, r, a1, a2); },
+      fill: function () { g.fill(); g.beginPath(); }, stroke: function () { g.stroke(); g.beginPath(); },
+      save: function () { g.save(); }, restore: function () { g.restore(); },
+      translate: function (x, y) { g.translate(x, y); }, scale: function (x, y) { g.scale(x, y); },
+      set_line_width: function (lw) { g.lineWidth = lw; }, set_line_cap: function (c) { g.lineCap = c; },
+      select_font_face: function (f) { font.face = f; setFont(); },
+      set_font_size: function (sz) { font.size = sz; setFont(); },
+      text_measure: function (str) { return [g.measureText(str).width, font.size]; },
+      show_text: function (str) { g.fillText(str, pt[0], pt[1]); pt[0] += g.measureText(str).width; },
+      // pinta si hay algo pendiente
+      frame: function (paint) {
+        if (!mg.dirty) return;
+        mg.dirty = false;
+        g.setTransform(DPR, 0, 0, DPR, 0, 0);
+        g.beginPath();
+        paint();
+      }
+    };
+    function grad(gr) {
+      return { _g: gr, add_color_stop_rgba: function (o, r, gg, b, a) { gr.addColorStop(o, rgba(r, gg, b, a)); } };
+    }
+    return mg;
+  }
 
-  var NAMES = ['bang', 'tick', 'grid', 'note', 'density', 'fall', 'wind', 'dur', 'mode', 'tonic', 'scale', 'low', 'high', 'sync', 'draw', 'paint'];
+  var NAMES = ['bang', 'tick', 'grid', 'note', 'density', 'fall', 'wind', 'dur', 'mode', 'tonic', 'scale', 'low', 'high', 'sync', 'draw', 'paint', 'msg_float'];
   function load(src, env) {
     var ret = '{' + NAMES.map(function (n) { return n + ': typeof ' + n + ' === "function" ? ' + n + ' : null'; }).join(',') + '}';
     var f = new Function('outlet', 'Global', 'jsarguments', 'mgraphics', 'box', 'post',
       'var inlets, outlets, autowatch;\n' + src + '\nreturn ' + ret + ';');
-    return f(env.outlet, Global, env.jsarguments, mg, { rect: [0, 0, W, H] }, function () {});
+    var mg = env.mg || makeMg(document.createElement('canvas'), 1, 1);
+    return f(env.outlet || function () {}, Global, env.jsarguments, mg, { rect: [0, 0].concat(mg.size) }, function () {});
   }
 
-  var dirty = false, notes = [];
+  var notes = [];
+  var rainMg = makeMg(cv, W, H);
   var log = document.getElementById('log');
   var NN = ['c', 'c#', 'd', 'd#', 'e', 'f', 'f#', 'g', 'g#', 'a', 'a#', 'b'];
-  var ui = load(await (await fetch('../midirain_ui.js')).text(), { jsarguments: ['midirain_ui.js'] });
+  await document.fonts.load('9px "Space Mono"');
+  var ui = load(await (await fetch('../midirain_ui.js')).text(), { jsarguments: ['midirain_ui.js'], mg: rainMg });
+  var knobSrc = await (await fetch('../midirain_knob.js')).text();
   var engine = load(await (await fetch('../midirain_engine.js')).text(), {
     jsarguments: ['midirain_engine.js', 'preview'],
     outlet: function (n) {
@@ -99,9 +116,35 @@
     var l = document.createElement('label'); l.innerHTML = html; ctl.appendChild(l);
     var el = l.querySelector(sel); el.addEventListener('input', function () { fn(el); }); fn(el);
   }
-  add('densidad<input type=range min=0 max=100 value=30>', 'input', function (e) { engine.density(+e.value); });
-  add('caída<input type=range min=0 max=100 value=40>', 'input', function (e) { engine.fall(+e.value); });
-  add('viento<input type=range min=-100 max=100 value=0>', 'input', function (e) { engine.wind(+e.value); });
+  // knobs: el jsui real encima de un "live.dial" simulado (arrastre vertical)
+  var knobs = [];
+  var knobRow = document.createElement('div');
+  knobRow.className = 'knobs';
+  ctl.appendChild(knobRow);
+  function knob(label, lo, hi, expo, init, unit, fn) {
+    var c = document.createElement('canvas');
+    c.width = 52 * DPR; c.height = 50 * DPR;
+    c.style.cssText = 'width:52px;height:50px;border:0;cursor:ns-resize;touch-action:none';
+    knobRow.appendChild(c);
+    var mg = makeMg(c, 52, 50);
+    var k = load(knobSrc, { jsarguments: ['midirain_knob.js', label, lo, hi, expo, init].concat(unit ? [unit] : []), mg: mg });
+    var pos = Math.pow((init - lo) / (hi - lo), 1 / expo);
+    function set() { var v = lo + (hi - lo) * Math.pow(pos, expo); k.msg_float(v); fn(v); }
+    var y0 = null;
+    c.addEventListener('pointerdown', function (e) { y0 = e.clientY; c.setPointerCapture(e.pointerId); });
+    c.addEventListener('pointermove', function (e) {
+      if (y0 === null) return;
+      pos = Math.max(0, Math.min(1, pos + (y0 - e.clientY) / 150)); y0 = e.clientY; set();
+    });
+    c.addEventListener('pointerup', function () { y0 = null; });
+    set();
+    knobs.push({ mg: mg, k: k, set: function (p) { pos = p; set(); } });
+  }
+  knob('densidad', 0, 100, 1, 30, '%', function (v) { engine.density(v); });
+  knob('caída', 0, 100, 1, 40, '%', function (v) { engine.fall(v); });
+  knob('viento', -100, 100, 1, 0, '', function (v) { engine.wind(v); });
+  knob('duración', 10, 2000, 3, 150, 'ms', function (v) { engine.dur(v); });
+  window.midirain.knobs = knobs;
   add('modo<select><option>escala<option>midi</select>', 'select', function (e) { engine.mode(e.selectedIndex); });
   add('tónica<select>' + NN.map(function (n) { return '<option>' + n; }).join('') + '</select>', 'select', function (e) { engine.tonic(e.selectedIndex); });
   add('escala<select><option>mayor<option selected>menor<option>dórica<option>frigia<option>lidia<option>mixolidia<option>menor armónica<option>pentatónica mayor<option>pentatónica menor<option>blues<option>cromática</select>', 'select', function (e) { engine.scale(e.selectedIndex); });
@@ -111,11 +154,8 @@
   setInterval(engine.bang, 10);
   (function frame() {
     requestAnimationFrame(frame);
-    if (!dirty) return;
-    dirty = false;
-    g.setTransform(DPR, 0, 0, DPR, 0, 0);
-    g.beginPath();
-    ui.paint();
+    rainMg.frame(ui.paint);
+    knobs.forEach(function (o) { o.mg.frame(o.k.paint); });
   })();
 })().catch(function (e) { document.getElementById('log').textContent = 'error: ' + e.message; throw e; });
 </script>

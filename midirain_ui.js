@@ -13,7 +13,7 @@ mgraphics.autofill = 0;
 inlets = 1;
 outlets = 1;
 
-var FLOOR_H = 18;
+var GROUND = 5;          // margen bajo la línea del suelo, para que se vea la salpicadura
 var FONT = "Space Mono";
 var FLASH_LIFE = 400;
 var SPLASH_LIFE = 450;
@@ -61,7 +61,7 @@ function paint() {
     var sz = size();
     var W = sz[0];
     var H = sz[1];
-    var RH = H - FLOOR_H;
+    var RH = H - GROUND;
     var t = Date.now();
     var S = G ? G.state : null;
 
@@ -74,10 +74,10 @@ function paint() {
         drawFlashGlow(S, W, RH, t);
         drawDrops(S, W, RH);
         drawSplashes(S, W, RH, t);
-        drawFloor(S, W, H, RH, t);
+        drawGround(S, W, RH, t);
         drawHeader(S, W);
     } else {
-        drawFloor({ cols: [], labels: [], flashT: [], flashV: [], mode: 0 }, W, H, RH, t);
+        drawGround({ cols: [], mode: 0 }, W, RH, t);
     }
 
     // scanlines
@@ -169,85 +169,46 @@ function flashAmount(S, c, t) {
     return (1 - age / FLASH_LIFE) * (0.55 + 0.45 * (S.flashV[c] || 0) / 127);
 }
 
+// destello: un charco de luz en el suelo, centrado en la columna que suena.
+// Las columnas no se dibujan: solo se intuyen por dónde se encienden.
 function drawFlashGlow(S, W, RH, t) {
     var n = S.cols ? S.cols.length : 0;
-    var cw, c, a, pat;
+    var cw, c, a, x, R, pat;
     if (!n) return;
     cw = W / n;
+    R = Math.max(14, Math.min(40, cw * 0.9));
     for (c = 0; c < n; c++) {
         a = flashAmount(S, c, t);
         if (a <= 0) continue;
-        pat = mgraphics.pattern_create_linear(0, RH, 0, RH - 44);
-        pat.add_color_stop_rgba(0, 1, 1, 1, 0.2 * a);
+        x = (c + 0.5) * cw;
+        pat = mgraphics.pattern_create_radial(x, RH, 0, x, RH, R);
+        pat.add_color_stop_rgba(0, 1, 1, 1, 0.32 * a);
         pat.add_color_stop_rgba(1, 1, 1, 1, 0);
         mgraphics.set_source(pat);
-        mgraphics.rectangle(c * cw, RH - 44, cw, 44);
+        mgraphics.rectangle(x - R, RH - R, 2 * R, R + 1);
         mgraphics.fill();
     }
 }
 
-function drawFloor(S, W, H, RH, t) {
+function drawGround(S, W, RH, t) {
     var n = S.cols ? S.cols.length : 0;
-    var cw, c, a, label, tw, x;
+    var msg, tw;
 
-    mgraphics.set_source_rgba(1, 1, 1, 0.04);
-    mgraphics.rectangle(0, RH, W, FLOOR_H);
-    mgraphics.fill();
-
-    mgraphics.select_font_face(FONT);
-    mgraphics.set_font_size(8);
-
-    if (!n) {
-        var msg = (S.mode === 1) ? "toca notas" : "sin notas en el rango";
-        var pulse = 0.45 + 0.2 * Math.sin(t / 420);
-        tw = mgraphics.text_measure(msg)[0];
-        mgraphics.set_source_rgba(1, 1, 1, pulse);
-        mgraphics.move_to((W - tw) / 2, H - 6);
-        mgraphics.show_text(msg);
-    } else {
-        cw = W / n;
-        for (c = 0; c < n; c++) {
-            a = flashAmount(S, c, t);
-            if (a > 0) {
-                mgraphics.set_source_rgba(1, 1, 1, 0.9 * a);
-                mgraphics.rectangle(c * cw, RH, cw, FLOOR_H);
-                mgraphics.fill();
-            }
-        }
-        // separadores
-        if (cw >= 3) {
-            mgraphics.set_line_width(1);
-            mgraphics.set_source_rgba(1, 1, 1, 0.16);
-            for (c = 1; c < n; c++) {
-                x = Math.round(c * cw) + 0.5;
-                mgraphics.move_to(x, RH);
-                mgraphics.line_to(x, H);
-            }
-            mgraphics.stroke();
-        }
-        // nombres de nota, si caben
-        for (c = 0; c < n; c++) {
-            label = S.labels[c];
-            if (!label) continue;
-            tw = mgraphics.text_measure(label)[0];
-            if (tw + 3 > cw) continue;
-            a = flashAmount(S, c, t);
-            if (a > 0.45) {
-                mgraphics.set_source_rgba(0, 0, 0, 0.9);
-            } else {
-                mgraphics.set_source_rgba(1, 1, 1, (S.cols[c] % 12 === 0) ? 0.8 : 0.45);
-            }
-            mgraphics.move_to(c * cw + (cw - tw) / 2, H - 6);
-            mgraphics.show_text(label);
-        }
-    }
-
-    // línea del suelo
     mgraphics.set_line_width(1);
-    mgraphics.set_source_rgba(1, 1, 1, 0.35);
+    mgraphics.set_source_rgba(1, 1, 1, 0.22);
     mgraphics.move_to(0, RH + 0.5);
     mgraphics.line_to(W, RH + 0.5);
     mgraphics.stroke();
+
+    if (!n) {
+        msg = (S.mode === 1) ? "toca notas" : "sin notas en el rango";
+        mgraphics.select_font_face(FONT);
+        mgraphics.set_font_size(8);
+        tw = mgraphics.text_measure(msg)[0];
+        mgraphics.set_source_rgba(1, 1, 1, 0.45 + 0.2 * Math.sin(t / 420));
+        mgraphics.move_to((W - tw) / 2, RH - 8);
+        mgraphics.show_text(msg);
+    }
 }
 
 function drawHeader(S, W) {
