@@ -1610,7 +1610,7 @@
 				"outlettype": [
 					""
 				],
-				"text": "script show density, script show knob_density, script show fall, script show knob_fall, script show wind, script show knob_wind, script show dur, script show knob_dur, script show l_mode, script show mode, script show l_sync, script show sync, script show l_tonic, script show tonic, script show l_scale, script show scale, script show l_low, script show low, script show l_high, script show high"
+				"text": "script show density, script bringtofront density, script show knob_density, script bringtofront knob_density, script show fall, script bringtofront fall, script show knob_fall, script bringtofront knob_fall, script show wind, script bringtofront wind, script show knob_wind, script bringtofront knob_wind, script show dur, script bringtofront dur, script show knob_dur, script bringtofront knob_dur, script show l_mode, script bringtofront l_mode, script show mode, script bringtofront mode, script show l_sync, script bringtofront l_sync, script show sync, script bringtofront sync, script show l_tonic, script bringtofront l_tonic, script show tonic, script bringtofront tonic, script show l_scale, script bringtofront l_scale, script show scale, script bringtofront scale, script show l_low, script bringtofront l_low, script show low, script bringtofront low, script show l_high, script bringtofront l_high, script show high, script bringtofront high"
 			}
 		},
 		{

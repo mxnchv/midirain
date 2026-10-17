@@ -278,7 +278,9 @@ wire("init", "tick", outlet=0)
 comment("c_panel", "panel de controles: mostrar / ocultar", [460, 400, 240, 18])
 obj("route_panel", "route panel", [460, 650, 80, 22], 2, 2)
 obj("sel_panel", "sel 1", [460, 680, 50, 22], 2, 2, ["bang", ""])
-msg("show", ", ".join("script show " + n for n in PANEL), [460, 710, 300, 22])
+# al mostrar, cada control se trae además al frente (en el orden de PANEL: el knob
+# queda por encima de su live.dial), para que la lluvia nunca los tape
+msg("show", ", ".join("script show %s, script bringtofront %s" % (n, n) for n in PANEL), [460, 710, 300, 22])
 msg("hide", ", ".join("script hide " + n for n in PANEL), [460, 740, 300, 22])
 obj("thispatcher", "thispatcher", [460, 780, 80, 22], 1, 2, ["", ""])
 wire("ui", "route_panel")
