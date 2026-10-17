@@ -14,14 +14,17 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-DEVICE_W = 400
+DEVICE_W = 590
 DEVICE_H = 169
+RAIN_W = 300
+CX = 312                   # x donde empiezan los controles
 
 FONT = "Space Mono"
 
-# paleta de mxnchv.xyz: negro y blanco con alfa
+# paleta de mxnchv.xyz: negro, blanco con alfa y el gris #1c1c1c de los separadores
 BLACK = [0.0, 0.0, 0.0, 1.0]
 WHITE = [1.0, 1.0, 1.0, 1.0]
+SEP = [0.11, 0.11, 0.11, 1.0]
 
 
 def white(a):
@@ -130,16 +133,6 @@ NUMBOX_COLORS = {
 
 KNOB_W, KNOB_H = 60, 72
 _knobs = []
-PANEL = []                 # nombres de script de todo lo que va en el panel de controles
-
-
-def panel(key):
-    """Marca una caja como parte del panel: oculta al cargar, con nombre de script."""
-    b = _ids[key]
-    b["varname"] = b.get("varname", key)
-    b["hidden"] = 1
-    PANEL.append(b["varname"])
-    return key
 
 
 def dial(key, varname, longname, label, x, y, mmin, mmax, initial, unitstyle, exponent=None, unit=None):
@@ -153,12 +146,10 @@ def dial(key, varname, longname, label, x, y, mmin, mmax, initial, unitstyle, ex
     box(key, "live.dial", [20 + i * 64, 30, KNOB_W, KNOB_H], 1, 2, ["", "float"], pres=pres,
         parameter_enable=1, varname=varname, showname=0, shownumber=0,
         saved_attribute_attributes=param(longname, longname, 0, **v), **DIAL_COLORS)
-    args = [label, mmin, mmax, exponent or 1, initial, x, y] + ([unit] if unit else [])
+    args = [label, mmin, mmax, exponent or 1, initial] + ([unit] if unit else [])
     kkey = "knob_" + key
     box(kkey, "jsui", [820 + i * 64, 30, KNOB_W, KNOB_H], 1, 0, pres=pres,
         filename="midirain_knob.js", jsarguments=args, ignoreclick=1, parameter_enable=0)
-    panel(key)
-    panel(kkey)
     _knobs.append(key)
     wire(key, kkey)
     return key
@@ -186,65 +177,73 @@ def numbox(key, varname, longname, initial, rect, pres):
 
 
 # ---------------------------------------------------------------------------
-# presentación: fondo y lluvia a todo el ancho
+# presentación: la lluvia a la izquierda, los controles a la derecha
 
 box("bg", "panel", [700, 10, 60, 30], 1, 0, pres=[0, 0, DEVICE_W, DEVICE_H],
     background=1, bgcolor=BLACK, border=0, rounded=0, ignoreclick=1)
+box("sep", "panel", [770, 10, 10, 30], 1, 0, pres=[RAIN_W + 2, 0, 1, DEVICE_H],
+    background=1, bgcolor=SEP, border=0, rounded=0, ignoreclick=1)
 
-box("ui", "jsui", [460, 480, 400, 169], 1, 1, [""], pres=[0, 0, DEVICE_W, DEVICE_H],
+box("ui", "jsui", [460, 480, RAIN_W, DEVICE_H], 1, 0, pres=[0, 0, RAIN_W, DEVICE_H],
     filename="midirain_ui.js", parameter_enable=0)
 
 # ---------------------------------------------------------------------------
-# panel de controles: encima de la lluvia, oculto hasta pulsar "controls +"
+# controles: knobs en 2x2 y menús en columna
 
 CONTROLS = []              # (clave del control, selector del motor)
+MX = CX + 140              # columna de menús
 
 
-# los nombres de los menús (Mode, Sync, Root…) los pinta midirain_ui.js, en negativo
-# como el logo; sus posiciones están allí, en PANEL_LABELS
+def label(key, text, x, y):
+    """Nombre encima de un menú; y es la línea base del texto."""
+    comment(key, text, [700.0 + 70 * (len(CONTROLS) % 4), 120.0 + 24 * (len(CONTROLS) // 4), 60, 18],
+            pres=[x - 4, y - 11, 60, 14], size=8.0)
 
 
-dial("density", "density", "Density", "Density", 14, 26, 0, 100, 30, 5, unit="%")
+dial("density", "density", "Density", "Density", CX, 4, 0, 100, 30, 5, unit="%")
 CONTROLS.append(("density", "density"))
 
-dial("fall", "fall", "Fall", "Fall", 84, 26, 0, 100, 40, 5, unit="%")
+dial("fall", "fall", "Fall", "Fall", CX + 64, 4, 0, 100, 40, 5, unit="%")
 CONTROLS.append(("fall", "fall"))
 
-dial("wind", "wind", "Wind", "Wind", 154, 26, -100, 100, 10, 0)
+dial("wind", "wind", "Wind", "Wind", CX, 86, -100, 100, 10, 0)
 CONTROLS.append(("wind", "wind"))
 
-dial("dur", "dur", "Length", "Length", 224, 26, 10, 2000, 150, 2, exponent=3, unit="ms")
+dial("dur", "dur", "Length", "Length", CX + 64, 86, 10, 2000, 150, 2, exponent=3, unit="ms")
 CONTROLS.append(("dur", "dur"))
 
-tab("mode", "mode", "Mode", ["Scale", "MIDI"], 0, [260, 30, 76, 14], [300, 44, 76, 14])
-panel("mode")
+label("l_mode", "Mode", MX, 14)
+tab("mode", "mode", "Mode", ["Scale", "MIDI"], 0, [260, 30, 76, 14], [MX, 18, 76, 14])
 CONTROLS.append(("mode", "mode"))
 
-menu("sync", "sync", "Sync", ["Free", "1/32", "1/16", "1/8", "1/4"], 0,
-     [340, 30, 76, 15], [300, 76, 76, 15])
-panel("sync")
-CONTROLS.append(("sync", "sync"))
-
+label("l_tonic", "Root", MX, 46)
 menu("tonic", "tonic", "Root",
      ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"], 0,
-     [420, 30, 54, 15], [14, 128, 54, 15])
-panel("tonic")
+     [420, 30, 40, 15], [MX, 50, 40, 15])
 CONTROLS.append(("tonic", "tonic"))
 
+label("l_scale", "Scale", MX + 46, 46)
 menu("scale", "scale", "Scale",
      ["Major", "Minor", "Dorian", "Phrygian", "Lydian", "Mixolydian", "Harmonic Minor",
       "Major Pentatonic", "Minor Pentatonic", "Blues", "Chromatic"], 1,
-     [480, 30, 130, 15], [76, 128, 130, 15])
-panel("scale")
+     [480, 30, 84, 15], [MX + 46, 50, 84, 15])
 CONTROLS.append(("scale", "scale"))
 
-numbox("low", "low", "Low", 48, [620, 30, 54, 15], [214, 128, 54, 15])
-panel("low")
+label("l_low", "Low", MX, 78)
+numbox("low", "low", "Low", 48, [620, 30, 62, 15], [MX, 82, 62, 15])
 CONTROLS.append(("low", "low"))
 
-numbox("high", "high", "High", 72, [680, 30, 54, 15], [276, 128, 54, 15])
-panel("high")
+label("l_high", "High", MX + 68, 78)
+numbox("high", "high", "High", 72, [680, 30, 62, 15], [MX + 68, 82, 62, 15])
 CONTROLS.append(("high", "high"))
+
+label("l_sync", "Sync", MX, 110)
+menu("sync", "sync", "Sync", ["Free", "1/32", "1/16", "1/8", "1/4"], 0,
+     [340, 30, 62, 15], [MX, 114, 62, 15])
+CONTROLS.append(("sync", "sync"))
+
+comment("credit", "mxnchv", [760, 100, 60, 18], pres=[DEVICE_W - 52, DEVICE_H - 20, 48, 14],
+        size=8.0, alpha=0.35, textjustification=2)
 
 # ---------------------------------------------------------------------------
 # lógica
@@ -264,24 +263,6 @@ for ctl, _ in CONTROLS:
 
 obj("tick", "metro 10", [20, 290, 60, 22], 2, 1, ["bang"])
 wire("init", "tick", outlet=0)
-
-# panel de controles: la lluvia (jsui) manda "panel 1|0" al pulsar "controls +" / "close ×".
-# Al cargar, siempre cerrado.
-comment("c_panel", "panel de controles: mostrar / ocultar", [460, 400, 240, 18])
-obj("route_panel", "route panel", [460, 650, 80, 22], 2, 2)
-obj("sel_panel", "sel 1", [460, 680, 50, 22], 2, 2, ["bang", ""])
-# al mostrar, cada control se trae además al frente (en el orden de PANEL: el knob
-# queda por encima de su live.dial), para que la lluvia nunca los tape
-msg("show", ", ".join("script show %s, script bringtofront %s" % (n, n) for n in PANEL), [460, 710, 300, 22])
-msg("hide", ", ".join("script hide " + n for n in PANEL), [460, 740, 300, 22])
-obj("thispatcher", "thispatcher", [460, 780, 80, 22], 1, 2, ["", ""])
-wire("ui", "route_panel")
-wire("route_panel", "sel_panel")
-wire("sel_panel", "show", outlet=0)
-wire("sel_panel", "hide", outlet=1)
-wire("show", "thispatcher")
-wire("hide", "thispatcher")
-wire("init", "hide", outlet=1)
 
 comment("c_sync", "rejilla del transporte (el motor la configura)", [200, 260, 280, 18])
 obj("gridmetro", "metro 16n @quantize 16n", [200, 290, 150, 22], 2, 1, ["bang"])
@@ -320,8 +301,6 @@ wire("p_tempo", "engine")
 for ctl, _ in CONTROLS:
     wire("p_" + ctl, "engine")
 wire("engine", "ui", outlet=1)
-for k in _knobs:
-    wire("engine", "knob_" + k, outlet=1)   # repintan con la lluvia, para el negativo
 wire("engine", "gridmetro", outlet=2)
 
 comment("c_out", "salida: makenote siempre manda el note-off", [20, 470, 280, 18])

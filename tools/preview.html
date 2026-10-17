@@ -14,12 +14,13 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #111; color: #fff; font-family: 'Space Mono', 'Courier New', monospace;
          min-height: 100vh; display: grid; place-items: center; padding: 16px; }
-  .device { position: relative; width: 400px; height: 169px; outline: 1px solid #1c1c1c; background: #000; }
-  #c { display: block; width: 400px; height: 169px; }
-  #panel { position: absolute; inset: 0; display: none; pointer-events: none; }
-  #panel.open { display: block; }
-  #panel > * { position: absolute; pointer-events: auto; }
+  .device { position: relative; width: 590px; height: 169px; outline: 1px solid #1c1c1c; background: #000; }
+  #c { display: block; width: 300px; height: 169px; }
+  .sep { position: absolute; left: 302px; top: 0; width: 1px; height: 169px; background: #1c1c1c; }
+  #panel > * { position: absolute; }
   #panel canvas { width: 60px; height: 72px; cursor: ns-resize; touch-action: none; }
+  #panel .lbl { font-size: 8px; color: rgba(255,255,255,0.5); }
+  #panel .credit { font-size: 8px; color: rgba(255,255,255,0.35); }
   select, input[type=number] { background: #000; color: #fff; border: 1px solid rgba(255,255,255,0.3);
          font: inherit; font-size: 8px; height: 15px; padding: 0 3px; border-radius: 0; }
   .tabs { display: flex; }
@@ -28,18 +29,19 @@
   .tabs button.on { background: #fff; color: #000; }
   .log { position: fixed; bottom: 12px; left: 16px; right: 16px; font-size: 10px;
          color: var(--grey-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  @media (max-width: 440px) { .device { transform: scale(0.85); transform-origin: center; } }
+  @media (max-width: 640px) { .device { transform: scale(0.6); transform-origin: center; } }
 </style>
 </head>
 <body>
 <div class="device">
-  <canvas id="c" width="1200" height="507"></canvas>
+  <canvas id="c" width="900" height="507"></canvas>
+  <div class="sep"></div>
   <div id="panel"></div>
 </div>
 <div class="log" id="log">—</div>
 <script>
 (async function () {
-  var W = 400, H = 169, DPR = 3;
+  var W = 300, H = 169, DPR = 3;
   var globals = {};
   function Global(name) { return globals[name] || (globals[name] = {}); }
 
@@ -145,7 +147,7 @@
   Task.prototype.cancel = function () { clearTimeout(this.id); };
 
   var NAMES = ['bang', 'tick', 'grid', 'note', 'density', 'fall', 'wind', 'dur', 'mode', 'tonic', 'scale',
-    'low', 'high', 'sync', 'draw', 'paint', 'msg_float', 'onidle', 'onidleout', 'onclick'];
+    'low', 'high', 'sync', 'draw', 'paint', 'msg_float'];
   function load(src, env) {
     var ret = '{' + NAMES.map(function (n) { return n + ': typeof ' + n + ' === "function" ? ' + n + ' : null'; }).join(',') + '}';
     var f = new Function('outlet', 'Global', 'jsarguments', 'mgraphics', 'box', 'post', 'Task',
@@ -161,10 +163,7 @@
   var NN = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
   var rainMg = makeMg(cv, W, H);
 
-  var ui = load(await (await fetch('../midirain_ui.js')).text(), {
-    jsarguments: ['midirain_ui.js'], mg: rainMg,
-    outlet: function (n, sel, v) { if (sel === 'panel') panel.classList.toggle('open', !!v); }
-  });
+  var ui = load(await (await fetch('../midirain_ui.js')).text(), { jsarguments: ['midirain_ui.js'], mg: rainMg });
   var engine = load(await (await fetch('../midirain_engine.js')).text(), {
     jsarguments: ['midirain_engine.js', 'preview'],
     outlet: function (n) {
@@ -173,36 +172,24 @@
         notes.unshift(NN[a[0] % 12] + (Math.floor(a[0] / 12) - 2) + ' ' + a[1]);
         notes.length = Math.min(notes.length, 16);
         log.textContent = notes.join('  ');
-      } else if (n === 1) {
-        ui.draw(a[1]);
-        knobs.forEach(function (o) { o.k.draw(a[1]); });
-      }
+      } else if (n === 1) ui.draw(a[1]);
     }
   });
   var knobs = [];
   var knobSrc = await (await fetch('../midirain_knob.js')).text();
 
-  // ratón sobre la lluvia, como en el jsui
-  function local(e) { var r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height]; }
-  var dev = document.querySelector('.device');
-  var overRain = false;
-  function onRain(e) { return e.target === cv || e.target === panel; }
-  dev.addEventListener('mousemove', function (e) {
-    if (onRain(e)) { overRain = true; var p = local(e); ui.onidle(p[0], p[1]); }
-    else if (overRain) { overRain = false; ui.onidleout(); }
-  });
-  dev.addEventListener('mouseleave', function () { if (overRain) { overRain = false; ui.onidleout(); } });
-  dev.addEventListener('click', function (e) { if (onRain(e)) { var p = local(e); ui.onclick(p[0], p[1]); } });
-
+  // mismas posiciones que en tools/build_device.py (layout A)
+  var CX = 312, MX = CX + 140;
   function place(el, x, y) { el.style.left = x + 'px'; el.style.top = y + 'px'; panel.appendChild(el); return el; }
+  function lbl(text, x, y) { var d = document.createElement('div'); d.className = 'lbl'; d.textContent = text; place(d, x, y - 9); }
 
   // knobs: el jsui real encima de un "live.dial" simulado (arrastre vertical)
-  function knob(label, x, lo, hi, expo, init, unit, fn) {
+  function knob(label, x, y, lo, hi, expo, init, unit, fn) {
     var c = document.createElement('canvas');
     c.width = 60 * DPR; c.height = 72 * DPR;
-    place(c, x, 26);
+    place(c, x, y);
     var mg = makeMg(c, 60, 72);
-    var k = load(knobSrc, { jsarguments: ['midirain_knob.js', label, lo, hi, expo, init, x, 26].concat(unit ? [unit] : []), mg: mg });
+    var k = load(knobSrc, { jsarguments: ['midirain_knob.js', label, lo, hi, expo, init].concat(unit ? [unit] : []), mg: mg });
     var pos = Math.pow((init - lo) / (hi - lo), 1 / expo);
     function set() { var v = lo + (hi - lo) * Math.pow(pos, expo); k.msg_float(v); fn(v); }
     var y0 = null;
@@ -215,12 +202,13 @@
     set();
     knobs.push({ mg: mg, k: k, set: function (p) { pos = p; set(); } });
   }
-  knob('Density', 14, 0, 100, 1, 30, '%', function (v) { engine.density(v); });
-  knob('Fall', 84, 0, 100, 1, 40, '%', function (v) { engine.fall(v); });
-  knob('Wind', 154, -100, 100, 1, 10, '', function (v) { engine.wind(v); });
-  knob('Length', 224, 10, 2000, 3, 150, 'ms', function (v) { engine.dur(v); });
+  knob('Density', CX, 4, 0, 100, 1, 30, '%', function (v) { engine.density(v); });
+  knob('Fall', CX + 64, 4, 0, 100, 1, 40, '%', function (v) { engine.fall(v); });
+  knob('Wind', CX, 86, -100, 100, 1, 10, '', function (v) { engine.wind(v); });
+  knob('Length', CX + 64, 86, 10, 2000, 3, 150, 'ms', function (v) { engine.dur(v); });
 
   function select(label, x, y, w, items, init, fn) {
+    lbl(label, x, y - 4);
     var s = document.createElement('select');
     s.innerHTML = items.map(function (it, i) { return '<option' + (i === init ? ' selected' : '') + '>' + it; }).join('');
     s.style.width = w + 'px';
@@ -228,12 +216,14 @@
     place(s, x, y); fn(init);
   }
   function number(label, x, y, init, fn) {
-    var n = document.createElement('input'); n.type = 'number'; n.min = 0; n.max = 127; n.value = init; n.style.width = '54px';
+    lbl(label, x, y - 4);
+    var n = document.createElement('input'); n.type = 'number'; n.min = 0; n.max = 127; n.value = init; n.style.width = '62px';
     n.addEventListener('input', function () { fn(+n.value); });
     place(n, x, y); fn(init);
   }
 
-  var tabs = place(document.createElement('div'), 300, 44); tabs.className = 'tabs';
+  lbl('Mode', MX, 14);
+  var tabs = place(document.createElement('div'), MX, 18); tabs.className = 'tabs';
   ['Scale', 'MIDI'].forEach(function (t, i) {
     var b = document.createElement('button'); b.textContent = t; if (!i) b.className = 'on';
     b.addEventListener('click', function () {
@@ -241,12 +231,13 @@
     });
     tabs.appendChild(b);
   });
-  select('Sync', 300, 76, 76, ['Free', '1/32', '1/16', '1/8', '1/4'], 0, function (i) { engine.sync(i); });
-  select('Root', 14, 128, 54, NN, 0, function (i) { engine.tonic(i); });
-  select('Scale', 76, 128, 130, ['Major', 'Minor', 'Dorian', 'Phrygian', 'Lydian', 'Mixolydian', 'Harmonic Minor',
+  select('Root', MX, 50, 40, NN, 0, function (i) { engine.tonic(i); });
+  select('Scale', MX + 46, 50, 84, ['Major', 'Minor', 'Dorian', 'Phrygian', 'Lydian', 'Mixolydian', 'Harmonic Minor',
     'Major Pentatonic', 'Minor Pentatonic', 'Blues', 'Chromatic'], 1, function (i) { engine.scale(i); });
-  number('Low', 214, 128, 48, function (v) { engine.low(v); });
-  number('High', 276, 128, 72, function (v) { engine.high(v); });
+  number('Low', MX, 82, 48, function (v) { engine.low(v); });
+  number('High', MX + 68, 82, 72, function (v) { engine.high(v); });
+  select('Sync', MX, 114, 62, ['Free', '1/32', '1/16', '1/8', '1/4'], 0, function (i) { engine.sync(i); });
+  var credit = place(document.createElement('div'), 590 - 10 - 30, 169 - 17); credit.className = 'credit'; credit.textContent = 'mxnchv';
 
   window.midirain = { engine: engine, ui: ui, knobs: knobs, globals: globals };
 
