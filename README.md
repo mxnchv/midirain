@@ -4,7 +4,9 @@ Dispositivo Max for Live (MIDI Effect) para Ableton Live 12. Cae una lluvia de g
 
 Estética de [mxnchv.xyz](https://mxnchv.xyz): negro puro, blanco con transparencia, Space Mono y scanlines.
 
-Al cargarlo solo se ve la lluvia. Al pasar el ratón por ella aparece **controls +** arriba a la derecha; al pulsarlo, los controles se abren encima de la lluvia, que sigue cayendo atenuada. **close ×** los cierra. Al abrir el set, el panel arranca siempre cerrado. Donde una gota cruza "midirain" o "controls +", esa parte de las letras sale en negativo.
+Al cargarlo solo se ve la lluvia. Al pasar el ratón por ella aparece **controls +** arriba a la derecha; al pulsarlo, los controles se abren encima de la lluvia, que sigue cayendo oscurecida un 35 %. El panel se cierra con **close ×**, con un clic fuera de los controles o al sacar el ratón del dispositivo (tras medio segundo). Al abrir el set arranca siempre cerrado.
+
+Donde una gota cruza "midirain", "controls +", los knobs o los nombres de los menús, esa parte sale en negativo. Los menús y casillas los dibuja Live y no se pueden invertir: llevan fondo negro.
 
 ## Instalación
 
@@ -43,7 +45,8 @@ Con **Sync** activo, el motor lee de Live el estado del transporte y el tempo (`
 ## Arquitectura
 
 - `midirain_engine.js` corre en `[js midirain_engine.js ---mr]`, movido por un `[metro 10]` que arranca `[live.thisdevice]`. Contiene la simulación, las columnas y la salida de notas. `bang`/`tick`, `grid` y `note` llevan `.immediate = 1`.
-- `midirain_knob.js` dibuja cada knob (aro gris abierto por abajo, recorrido en blanco, nombre y valor debajo) en un `[jsui]` con `ignoreclick`, encima de un `live.dial` transparente. El `live.dial` es el parámetro real: recibe el ratón, la automatización y el MIDI map, y le pasa su valor al jsui.
+- Para cerrar al sacar el ratón no se usa `[hover]` (no informa de objetos con `ignoreclick`, como los knobs): la lluvia recuerda dónde estaba el ratón y, si deja de verlo estando a menos de 12 px del borde, es que ha salido del dispositivo; ningún control llega tan cerca del borde.
+- `midirain_knob.js` dibuja cada knob (aro gris abierto por abajo, recorrido en blanco, nombre y valor debajo) en un `[jsui]` con `ignoreclick`, encima de un `live.dial` transparente. El `live.dial` es el parámetro real: recibe el ratón, la automatización y el MIDI map, y le pasa su valor al jsui. Los knobs también reciben `draw` del motor y leen las gotas que la lluvia publica en el `Global` (`segs`) para su negativo.
 - `midirain_ui.js` corre en `[jsui]` y solo dibuja. Calcula la posición de cada gota en el instante de pintar, a partir del último paso del motor, para que el movimiento sea continuo. También lleva el botón del panel: manda `panel 1|0`, y `[thispatcher]` muestra u oculta los controles (`script show|hide`). Lee el estado de un `Global` cuyo nombre es único por instancia (`---` se sustituye por un ID) y repinta al recibir `draw <nombreGlobal>`, unos 60 fps. Las notas no dependen nunca del repintado.
 - Salida: motor → `[unpack 0 0 0]` → `[makenote]` → `[pack 0 0]` → `[midiformat]` → `[midiout]`. Al desactivar el dispositivo, `makenote` recibe `stop` y apaga todo lo que suena.
 - Entrada: `[midiin]` → `[midiparse]` → `[prepend note]` → motor. Las notas de entrada no pasan a la salida.

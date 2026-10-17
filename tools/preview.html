@@ -19,7 +19,6 @@
   #panel { position: absolute; inset: 0; display: none; pointer-events: none; }
   #panel.open { display: block; }
   #panel > * { position: absolute; pointer-events: auto; }
-  #panel .lbl { font-size: 8px; color: rgba(255,255,255,0.5); pointer-events: none; }
   #panel canvas { width: 60px; height: 72px; cursor: ns-resize; touch-action: none; }
   select, input[type=number] { background: #000; color: #fff; border: 1px solid rgba(255,255,255,0.3);
          font: inherit; font-size: 8px; height: 15px; padding: 0 3px; border-radius: 0; }
@@ -52,7 +51,10 @@
     var font = { face: 'Space Mono', size: 8 };
     var pt = [0, 0];
     var glyphs = [];        // text_path pendiente
+    var pathOps = [];       // move_to / arc / … pendientes de un clip()
+    var recording = false;
     var masks = [];         // pila de save(): recorte por texto activo en ese nivel
+    function rec(op, args) { if (recording) pathOps.push([op, args]); }
     function setFont() { g.font = font.size + 'px "' + font.face + '"'; }
     function grad(gr) {
       return { _g: gr, add_color_stop_rgba: function (o, r, gg, b, a) { gr.addColorStop(o, rgba(r, gg, b, a)); } };
@@ -66,8 +68,11 @@
       pattern_create_radial: function (x1, y1, r1, x2, y2, r2) { return grad(g.createRadialGradient(x1, y1, r1, x2, y2, r2)); },
       rectangle: function (x, y, ww, hh) { g.rect(x, y, ww, hh); },
       ellipse: function (x, y, ww, hh) { g.moveTo(x + ww, y + hh / 2); g.ellipse(x + ww / 2, y + hh / 2, ww / 2, hh / 2, 0, 0, Math.PI * 2); },
-      move_to: function (x, y) { pt = [x, y]; g.moveTo(x, y); }, line_to: function (x, y) { g.lineTo(x, y); },
-      arc: function (x, y, r, a1, a2) { g.arc(x, y, r, a1, a2); },
+      move_to: function (x, y) { pt = [x, y]; rec('moveTo', [x, y]); g.moveTo(x, y); },
+      line_to: function (x, y) { rec('lineTo', [x, y]); g.lineTo(x, y); },
+      arc: function (x, y, r, a1, a2) { rec('arc', [x, y, r, a1, a2]); g.arc(x, y, r, a1, a2); },
+      arc_negative: function (x, y, r, a1, a2) { rec('arc', [x, y, r, a1, a2, true]); g.arc(x, y, r, a1, a2, true); },
+      close_path: function () { rec('closePath', []); g.closePath(); },
       fill: function () { g.fill(); g.beginPath(); }, stroke: function () { g.stroke(); g.beginPath(); },
       translate: function (x, y) { g.translate(x, y); }, scale: function (x, y) { g.scale(x, y); },
       set_line_width: function (lw) { g.lineWidth = lw; }, set_line_cap: function (c) { g.lineCap = c; },
@@ -84,12 +89,20 @@
         var og = off.getContext('2d');
         og.setTransform(g.getTransform());
         og.font = g.font; og.lineCap = g.lineCap; og.lineWidth = g.lineWidth;
-        masks[masks.length - 1] = { off: off, glyphs: glyphs, parent: g };
+        // trazado geométrico pendiente (p. ej. el arco del knob): se rellena en la máscara
+        var shape = document.createElement('canvas');
+        shape.width = canvas.width; shape.height = canvas.height;
+        var sg = shape.getContext('2d');
+        sg.setTransform(g.getTransform());
+        sg.fillStyle = '#fff';
+        if (pathOps.length) { sg.beginPath(); pathOps.forEach(function (op) { sg[op[0]].apply(sg, op[1]); }); sg.fill(); }
+        masks[masks.length - 1] = { off: off, glyphs: glyphs, shape: shape, parent: g };
         glyphs = [];
+        recording = false;
         g.beginPath();
         g = og;
       },
-      save: function () { g.save(); masks.push(null); },
+      save: function () { g.save(); masks.push(null); pathOps = []; recording = true; },
       restore: function () {
         var m = masks.pop();
         if (m) {
@@ -98,6 +111,7 @@
           mask.width = canvas.width; mask.height = canvas.height;
           var mk = mask.getContext('2d');
           mk.fillStyle = '#fff';
+          mk.drawImage(m.shape, 0, 0);
           m.glyphs.forEach(function (gl) { mk.setTransform(gl.m); mk.font = gl.font; mk.fillText(gl.s, gl.x, gl.y); });
           og.setTransform(1, 0, 0, 1, 0, 0);
           og.globalCompositeOperation = 'destination-in';
@@ -110,6 +124,8 @@
         }
         g.restore();
         glyphs = [];
+        recording = false;
+        pathOps = [];
       },
       frame: function (paint) {
         if (!mg.dirty) return;
@@ -124,13 +140,17 @@
     return mg;
   }
 
+  function Task(fn) { this.fn = fn; this.id = null; }
+  Task.prototype.schedule = function (ms) { var t = this; clearTimeout(t.id); t.id = setTimeout(function () { t.fn(); }, ms || 0); };
+  Task.prototype.cancel = function () { clearTimeout(this.id); };
+
   var NAMES = ['bang', 'tick', 'grid', 'note', 'density', 'fall', 'wind', 'dur', 'mode', 'tonic', 'scale',
     'low', 'high', 'sync', 'draw', 'paint', 'msg_float', 'onidle', 'onidleout', 'onclick'];
   function load(src, env) {
     var ret = '{' + NAMES.map(function (n) { return n + ': typeof ' + n + ' === "function" ? ' + n + ' : null'; }).join(',') + '}';
-    var f = new Function('outlet', 'Global', 'jsarguments', 'mgraphics', 'box', 'post',
+    var f = new Function('outlet', 'Global', 'jsarguments', 'mgraphics', 'box', 'post', 'Task',
       'var inlets, outlets, autowatch;\n' + src + '\nreturn ' + ret + ';');
-    return f(env.outlet || function () {}, Global, env.jsarguments, env.mg, { rect: [0, 0].concat(env.mg ? env.mg.size : [0, 0]) }, function () {});
+    return f(env.outlet || function () {}, Global, env.jsarguments, env.mg, { rect: [0, 0].concat(env.mg ? env.mg.size : [0, 0]) }, function () {}, Task);
   }
 
   await document.fonts.load('9px "Space Mono"');
@@ -153,30 +173,36 @@
         notes.unshift(NN[a[0] % 12] + (Math.floor(a[0] / 12) - 2) + ' ' + a[1]);
         notes.length = Math.min(notes.length, 16);
         log.textContent = notes.join('  ');
-      } else if (n === 1) ui.draw(a[1]);
+      } else if (n === 1) {
+        ui.draw(a[1]);
+        knobs.forEach(function (o) { o.k.draw(a[1]); });
+      }
     }
   });
+  var knobs = [];
   var knobSrc = await (await fetch('../midirain_knob.js')).text();
 
   // ratón sobre la lluvia, como en el jsui
   function local(e) { var r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height]; }
-  cv.addEventListener('mousemove', function (e) { var p = local(e); ui.onidle(p[0], p[1]); });
-  cv.addEventListener('mouseleave', function () { ui.onidleout(); });
-  cv.addEventListener('click', function (e) { var p = local(e); ui.onclick(p[0], p[1]); });
-  // el botón también tiene que funcionar con el panel abierto (no lo tapa ningún control)
-  panel.addEventListener('click', function (e) { if (e.target === panel) { var p = local(e); ui.onclick(p[0], p[1]); } });
+  var dev = document.querySelector('.device');
+  var overRain = false;
+  function onRain(e) { return e.target === cv || e.target === panel; }
+  dev.addEventListener('mousemove', function (e) {
+    if (onRain(e)) { overRain = true; var p = local(e); ui.onidle(p[0], p[1]); }
+    else if (overRain) { overRain = false; ui.onidleout(); }
+  });
+  dev.addEventListener('mouseleave', function () { if (overRain) { overRain = false; ui.onidleout(); } });
+  dev.addEventListener('click', function (e) { if (onRain(e)) { var p = local(e); ui.onclick(p[0], p[1]); } });
 
   function place(el, x, y) { el.style.left = x + 'px'; el.style.top = y + 'px'; panel.appendChild(el); return el; }
-  function lbl(text, x, y) { var d = document.createElement('div'); d.className = 'lbl'; d.textContent = text; place(d, x, y - 9); }
 
   // knobs: el jsui real encima de un "live.dial" simulado (arrastre vertical)
-  var knobs = [];
   function knob(label, x, lo, hi, expo, init, unit, fn) {
     var c = document.createElement('canvas');
     c.width = 60 * DPR; c.height = 72 * DPR;
     place(c, x, 26);
     var mg = makeMg(c, 60, 72);
-    var k = load(knobSrc, { jsarguments: ['midirain_knob.js', label, lo, hi, expo, init].concat(unit ? [unit] : []), mg: mg });
+    var k = load(knobSrc, { jsarguments: ['midirain_knob.js', label, lo, hi, expo, init, x, 26].concat(unit ? [unit] : []), mg: mg });
     var pos = Math.pow((init - lo) / (hi - lo), 1 / expo);
     function set() { var v = lo + (hi - lo) * Math.pow(pos, expo); k.msg_float(v); fn(v); }
     var y0 = null;
@@ -195,7 +221,6 @@
   knob('Length', 224, 10, 2000, 3, 150, 'ms', function (v) { engine.dur(v); });
 
   function select(label, x, y, w, items, init, fn) {
-    lbl(label, x, y - 4);
     var s = document.createElement('select');
     s.innerHTML = items.map(function (it, i) { return '<option' + (i === init ? ' selected' : '') + '>' + it; }).join('');
     s.style.width = w + 'px';
@@ -203,13 +228,11 @@
     place(s, x, y); fn(init);
   }
   function number(label, x, y, init, fn) {
-    lbl(label, x, y - 4);
     var n = document.createElement('input'); n.type = 'number'; n.min = 0; n.max = 127; n.value = init; n.style.width = '54px';
     n.addEventListener('input', function () { fn(+n.value); });
     place(n, x, y); fn(init);
   }
 
-  lbl('Mode', 300, 40);
   var tabs = place(document.createElement('div'), 300, 44); tabs.className = 'tabs';
   ['Scale', 'MIDI'].forEach(function (t, i) {
     var b = document.createElement('button'); b.textContent = t; if (!i) b.className = 'on';

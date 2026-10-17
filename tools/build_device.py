@@ -153,7 +153,7 @@ def dial(key, varname, longname, label, x, y, mmin, mmax, initial, unitstyle, ex
     box(key, "live.dial", [20 + i * 64, 30, KNOB_W, KNOB_H], 1, 2, ["", "float"], pres=pres,
         parameter_enable=1, varname=varname, showname=0, shownumber=0,
         saved_attribute_attributes=param(longname, longname, 0, **v), **DIAL_COLORS)
-    args = [label, mmin, mmax, exponent or 1, initial] + ([unit] if unit else [])
+    args = [label, mmin, mmax, exponent or 1, initial, x, y] + ([unit] if unit else [])
     kkey = "knob_" + key
     box(kkey, "jsui", [820 + i * 64, 30, KNOB_W, KNOB_H], 1, 0, pres=pres,
         filename="midirain_knob.js", jsarguments=args, ignoreclick=1, parameter_enable=0)
@@ -200,10 +200,8 @@ box("ui", "jsui", [460, 480, 400, 169], 1, 1, [""], pres=[0, 0, DEVICE_W, DEVICE
 CONTROLS = []              # (clave del control, selector del motor)
 
 
-def label(key, text, x, y):
-    comment(key, text, [0, 0, 60, 18], pres=[x - 4, y - 11, 60, 14], size=8.0)
-    _ids[key]["patching_rect"] = [700.0 + 70 * (len(PANEL) % 4), 120.0 + 24 * (len(PANEL) // 4), 60.0, 18.0]
-    panel(key)
+# los nombres de los menús (Mode, Sync, Root…) los pinta midirain_ui.js, en negativo
+# como el logo; sus posiciones están allí, en PANEL_LABELS
 
 
 dial("density", "density", "Density", "Density", 14, 26, 0, 100, 30, 5, unit="%")
@@ -218,25 +216,21 @@ CONTROLS.append(("wind", "wind"))
 dial("dur", "dur", "Length", "Length", 224, 26, 10, 2000, 150, 2, exponent=3, unit="ms")
 CONTROLS.append(("dur", "dur"))
 
-label("l_mode", "Mode", 300, 40)
 tab("mode", "mode", "Mode", ["Scale", "MIDI"], 0, [260, 30, 76, 14], [300, 44, 76, 14])
 panel("mode")
 CONTROLS.append(("mode", "mode"))
 
-label("l_sync", "Sync", 300, 72)
 menu("sync", "sync", "Sync", ["Free", "1/32", "1/16", "1/8", "1/4"], 0,
      [340, 30, 76, 15], [300, 76, 76, 15])
 panel("sync")
 CONTROLS.append(("sync", "sync"))
 
-label("l_tonic", "Root", 14, 124)
 menu("tonic", "tonic", "Root",
      ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"], 0,
      [420, 30, 54, 15], [14, 128, 54, 15])
 panel("tonic")
 CONTROLS.append(("tonic", "tonic"))
 
-label("l_scale", "Scale", 76, 124)
 menu("scale", "scale", "Scale",
      ["Major", "Minor", "Dorian", "Phrygian", "Lydian", "Mixolydian", "Harmonic Minor",
       "Major Pentatonic", "Minor Pentatonic", "Blues", "Chromatic"], 1,
@@ -244,12 +238,10 @@ menu("scale", "scale", "Scale",
 panel("scale")
 CONTROLS.append(("scale", "scale"))
 
-label("l_low", "Low", 214, 124)
 numbox("low", "low", "Low", 48, [620, 30, 54, 15], [214, 128, 54, 15])
 panel("low")
 CONTROLS.append(("low", "low"))
 
-label("l_high", "High", 276, 124)
 numbox("high", "high", "High", 72, [680, 30, 54, 15], [276, 128, 54, 15])
 panel("high")
 CONTROLS.append(("high", "high"))
@@ -328,6 +320,8 @@ wire("p_tempo", "engine")
 for ctl, _ in CONTROLS:
     wire("p_" + ctl, "engine")
 wire("engine", "ui", outlet=1)
+for k in _knobs:
+    wire("engine", "knob_" + k, outlet=1)   # repintan con la lluvia, para el negativo
 wire("engine", "gridmetro", outlet=2)
 
 comment("c_out", "salida: makenote siempre manda el note-off", [20, 470, 280, 18])

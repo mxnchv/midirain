@@ -3,8 +3,11 @@
 // que el motor publica en un Global y repinta cuando recibe "draw <nombreGlobal>".
 // Ninguna nota depende de este archivo. ES5.
 //
-// También lleva el botón "controls": aparece al pasar el ratón por la lluvia y
-// abre o cierra el panel de controles (sale "panel 0|1" por el outlet 0).
+// También lleva el panel de controles (sale "panel 0|1" por el outlet 0):
+// - "controls +" aparece al pasar el ratón por la lluvia y lo abre;
+// - "close ×", un clic fuera de los controles o sacar el ratón del dispositivo lo cierran.
+// Con el panel abierto pinta los nombres de los menús, en negativo como el logo,
+// y publica las gotas en el Global (segs) para que los knobs hagan lo mismo.
 //
 // Estética de mxnchv.xyz: negro puro, blanco con transparencia, Space Mono,
 // líneas de 1 px y scanlines.
@@ -22,7 +25,16 @@ var FLASH_LIFE = 400;
 var SPLASH_LIFE = 450;
 var MAX_EXTRAPOLATE = 0.05;  // s
 var FADE = 200;          // ms, aparición del botón al pasar el ratón
-var PANEL_DIM = 0.82;    // oscurecimiento de la lluvia con el panel abierto
+var PANEL_DIM = 0.35;    // oscurecimiento de la lluvia con el panel abierto
+var EDGE = 12;           // px: salir de la lluvia tan cerca del borde es salir del dispositivo
+var CLOSE_DELAY = 500;   // ms antes de cerrar al salir, por si vuelves
+
+// nombres de los menús del panel: mismas posiciones que en tools/build_device.py
+// (x, línea base), justo encima de cada live.menu / live.numbox / live.tab
+var PANEL_LABELS = [
+    ["Mode", 300, 40], ["Sync", 300, 72],
+    ["Root", 14, 124], ["Scale", 76, 124], ["Low", 214, 124], ["High", 276, 124]
+];
 var WIND_SLOPE = 0.6;    // igual que en el motor
 
 var gname = null;
@@ -32,6 +44,9 @@ var panelOpen = false;
 var hover = false;
 var hoverT = 0;
 var toggleBox = null;    // [x0, y0, x1, y1] del botón, del último repintado
+var mouseX = -1;
+var mouseY = -1;
+var closer = new Task(closeFromHover, this);
 
 function draw(name) {
     name = String(name);
@@ -50,27 +65,48 @@ function bang() {
 // ratón
 
 function onidle(x, y) {
+    mouseX = x;
+    mouseY = y;
+    closer.cancel();
     if (!hover) {
         hover = true;
         hoverT = Date.now();
     }
 }
 
+// La lluvia deja de recibir el ratón tanto si sale del dispositivo como si pasa
+// a un control (que está encima). Solo lo damos por salida si la última posición
+// estaba pegada al borde: ningún control llega tan cerca.
 function onidleout() {
+    var sz = size();
     if (hover) {
         hover = false;
         hoverT = Date.now();
     }
+    if (panelOpen && (mouseX < EDGE || mouseY < EDGE || mouseX > sz[0] - EDGE || mouseY > sz[1] - EDGE)) {
+        closer.schedule(CLOSE_DELAY);
+    }
+}
+
+function closeFromHover() {
+    if (panelOpen) setPanel(false);
 }
 
 function onclick(x, y) {
     var b = toggleBox;
-    if (!b || (!panelOpen && hoverAmount(Date.now()) < 0.2)) return;
-    if (x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3]) {
-        panelOpen = !panelOpen;
-        outlet(0, "panel", panelOpen ? 1 : 0);
-        mgraphics.redraw();
+    if (panelOpen) {
+        setPanel(false);    // "close ×" o cualquier clic fuera de los controles
+        return;
     }
+    if (!b || hoverAmount(Date.now()) < 0.2) return;
+    if (x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3]) setPanel(true);
+}
+
+function setPanel(open) {
+    closer.cancel();
+    panelOpen = open;
+    outlet(0, "panel", open ? 1 : 0);
+    mgraphics.redraw();
 }
 
 function hoverAmount(t) {
@@ -115,11 +151,13 @@ function paint() {
         drawGround({ cols: [], mode: 0 }, W, RH, t);
     }
 
+    if (G) G.segs = segs;   // para el negativo de los knobs
+
     if (panelOpen) {
         mgraphics.set_source_rgba(0, 0, 0, PANEL_DIM);
         mgraphics.rectangle(0, 0, W, H);
         mgraphics.fill();
-        segs = [];      // la lluvia queda atenuada detrás: sin negativo
+        drawPanelLabels(segs);
     }
 
     drawHeader(W, t, segs);
@@ -139,7 +177,7 @@ function paint() {
 function dropSegments(S, W, RH, t) {
     var drops = S.drops;
     var out = [];
-    var dt, i, d, x, y, s, L, dx, dy, len;
+    var dt, i, d, x, y, s, L, dx, dy, len, b;
     if (!drops) return out;
     dt = S.stepT ? (t - S.stepT) / 1000 : 0;
     dt = dt < 0 ? 0 : (dt > MAX_EXTRAPOLATE ? MAX_EXTRAPOLATE : dt);
@@ -162,9 +200,10 @@ function dropSegments(S, W, RH, t) {
         L = 4 + 10 * s + 8 * S.fallN;
         x *= W;
         y *= RH;
+        b = Math.min(3, Math.floor(s * 4));
         out.push({
             x1: x - dx * L, y1: y - dy * L, x2: x, y2: y,
-            b: Math.min(3, Math.floor(s * 4))
+            b: b, w: bucketWidth(b)
         });
     }
     return out;
@@ -333,7 +372,8 @@ function negativeText(str, x, y, track, alpha, segs) {
         spaced(str, x, y, track, true);
         mgraphics.clip();
         mgraphics.set_line_cap("round");
-        mgraphics.set_source_rgba(0, 0, 0, alpha);
+        // negro pleno aunque el texto sea gris; solo se atenúa durante el fundido del botón
+        mgraphics.set_source_rgba(0, 0, 0, Math.min(1, 2 * alpha));
         for (b = 0; b < 4; b++) {
             mgraphics.set_line_width(bucketWidth(b));
             strokeSegs(hit, b);
@@ -343,6 +383,16 @@ function negativeText(str, x, y, track, alpha, segs) {
         mgraphics.restore();
     }
     return w;
+}
+
+function drawPanelLabels(segs) {
+    var i, l;
+    mgraphics.select_font_face(FONT);
+    mgraphics.set_font_size(8);
+    for (i = 0; i < PANEL_LABELS.length; i++) {
+        l = PANEL_LABELS[i];
+        negativeText(l[0], l[1], l[2], 0, 0.5, segs);
+    }
 }
 
 function drawHeader(W, t, segs) {

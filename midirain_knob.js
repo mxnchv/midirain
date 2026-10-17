@@ -4,7 +4,12 @@
 // (con ignoreclick), que es el que recibe el ratón, la automatización y el
 // MIDI map, y le manda su valor por la entrada. ES5.
 //
-// jsarguments: etiqueta mínimo máximo exponente inicial [unidad]
+// Donde una gota de la lluvia cruza el recorrido blanco o los textos, esa parte
+// sale en negativo. Las gotas las publica midirain_ui.js en el Global (segs),
+// en coordenadas de la lluvia; por eso el knob necesita saber dónde está.
+//
+// jsarguments: etiqueta mínimo máximo exponente inicial x y [unidad]
+//   x y: posición del knob dentro de la lluvia (presentation_rect)
 
 mgraphics.init();
 mgraphics.relative_coords = 0;
@@ -16,13 +21,22 @@ outlets = 0;
 var FONT = "Space Mono";
 var A0 = 0.75 * Math.PI;    // abajo a la izquierda
 var A1 = 2.25 * Math.PI;    // abajo a la derecha
+var GAP = 0.12;             // hueco entre el aro gris y el recorrido blanco
+var CY = 22;
+var R = 17;
+var STROKE = 2.5;
 
 var label = arg(1, "");
 var lo = Number(arg(2, 0));
 var hi = Number(arg(3, 100));
 var expo = Number(arg(4, 1)) || 1;
 var value = Number(arg(5, lo));
-var unit = arg(6, "");
+var ox = Number(arg(6, 0));
+var oy = Number(arg(7, 0));
+var unit = arg(8, "");
+
+var gname = null;
+var G = null;
 
 function arg(i, dflt) {
     return (typeof jsarguments !== "undefined" && jsarguments.length > i) ? jsarguments[i] : dflt;
@@ -35,6 +49,16 @@ function msg_float(v) {
 
 function msg_int(v) {
     msg_float(v);
+}
+
+// el motor lo manda a ~60 fps: repintamos para seguir a la lluvia
+function draw(name) {
+    name = String(name);
+    if (name !== gname) {
+        gname = name;
+        G = new Global(name);
+    }
+    mgraphics.redraw();
 }
 
 function position() {
@@ -63,48 +87,95 @@ function arcFrom(cx, cy, r, from, to) {
     mgraphics.arc(cx, cy, r, from, to);
 }
 
-function centered(str, cx, y) {
+function centered(str, cx, y, asPath) {
     var w = mgraphics.text_measure(str)[0];
     mgraphics.move_to(cx - w / 2, y);
-    mgraphics.show_text(str);
+    if (asPath) {
+        mgraphics.text_path(str);
+    } else {
+        mgraphics.show_text(str);
+    }
+}
+
+// trozos de gota que caen dentro del knob, en sus coordenadas
+function hitSegments(W, H) {
+    var segs = G ? G.segs : null;
+    var out = [];
+    var i, g;
+    if (!segs) return out;
+    for (i = 0; i < segs.length; i++) {
+        g = segs[i];
+        if (Math.max(g.x1, g.x2) < ox || Math.min(g.x1, g.x2) > ox + W) continue;
+        if (Math.max(g.y1, g.y2) < oy || Math.min(g.y1, g.y2) > oy + H) continue;
+        out.push(g);
+    }
+    return out;
 }
 
 function paint() {
     var sz = size();
     var W = sz[0];
-    var H = sz[1];
     var cx = W / 2;
-    var cy = 22;
-    var r = 17;
-    var p = position();
-    var a = A0 + p * (A1 - A0);
+    var a = A0 + position() * (A1 - A0);
     var from = (lo < 0) ? 1.5 * Math.PI : A0;   // bipolar: desde arriba
+    var v0 = Math.min(a, from);
+    var v1 = Math.max(a, from, v0 + 0.01);     // en bipolar centrado, un punto arriba
+    var txt = format();
+    var hit, i, g;
 
     mgraphics.set_line_cap("round");
-    mgraphics.set_line_width(2.5);
+    mgraphics.set_line_width(STROKE);
 
-    // aro, abierto por abajo
+    // aro gris, solo donde no hay recorrido blanco
     mgraphics.set_source_rgba(1, 1, 1, 0.28);
-    arcFrom(cx, cy, r, A0, A1);
-    mgraphics.stroke();
-
-    // recorrido hasta el valor
-    if (Math.abs(a - from) > 0.001) {
-        mgraphics.set_source_rgba(1, 1, 1, 1);
-        if (a > from) {
-            arcFrom(cx, cy, r, from, a);
-        } else {
-            arcFrom(cx, cy, r, a, from);
-        }
+    if (v0 - GAP > A0) {
+        arcFrom(cx, CY, R, A0, v0 - GAP);
         mgraphics.stroke();
     }
+    if (v1 + GAP < A1) {
+        arcFrom(cx, CY, R, v1 + GAP, A1);
+        mgraphics.stroke();
+    }
+
+    // recorrido hasta el valor
+    mgraphics.set_source_rgba(1, 1, 1, 1);
+    arcFrom(cx, CY, R, v0, v1);
+    mgraphics.stroke();
 
     mgraphics.select_font_face(FONT);
     mgraphics.set_font_size(8);
     mgraphics.set_source_rgba(1, 1, 1, 0.5);
-    centered(label, cx, 54);
+    centered(label, cx, 54, false);
 
     mgraphics.set_font_size(9);
     mgraphics.set_source_rgba(1, 1, 1, 1);
-    centered(format(), cx, 66);
+    centered(txt, cx, 66, false);
+
+    // negativo: recortamos a la forma del recorrido y de los textos y pintamos
+    // en negro los trozos de gota que los cruzan
+    hit = hitSegments(W, sz[1]);
+    if (!hit.length) return;
+    try {
+        mgraphics.save();
+        mgraphics.move_to(cx + Math.cos(v0) * (R + STROKE / 2), CY + Math.sin(v0) * (R + STROKE / 2));
+        mgraphics.arc(cx, CY, R + STROKE / 2, v0, v1);
+        mgraphics.arc_negative(cx, CY, R - STROKE / 2, v1, v0);
+        mgraphics.close_path();
+        mgraphics.set_font_size(8);
+        centered(label, cx, 54, true);
+        mgraphics.set_font_size(9);
+        centered(txt, cx, 66, true);
+        mgraphics.clip();
+        mgraphics.set_source_rgba(0, 0, 0, 1);
+        for (i = 0; i < hit.length; i++) {
+            g = hit[i];
+            mgraphics.set_line_width(g.w);
+            mgraphics.move_to(g.x1 - ox, g.y1 - oy);
+            mgraphics.line_to(g.x2 - ox, g.y2 - oy);
+            mgraphics.stroke();
+        }
+        mgraphics.restore();
+    } catch (e) {
+        mgraphics.restore();
+    }
 }
