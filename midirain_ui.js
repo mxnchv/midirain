@@ -3,8 +3,11 @@
 // que el motor publica en un Global y repinta cuando recibe "draw <nombreGlobal>".
 // Ninguna nota depende de este archivo. ES5.
 //
+// También lleva el botón "controls": aparece al pasar el ratón por la lluvia y
+// abre o cierra el panel de controles (sale "panel 0|1" por el outlet 0).
+//
 // Estética de mxnchv.xyz: negro puro, blanco con transparencia, Space Mono,
-// líneas de 1 px, minúsculas y scanlines.
+// líneas de 1 px y scanlines.
 
 mgraphics.init();
 mgraphics.relative_coords = 0;
@@ -17,9 +20,18 @@ var GROUND = 5;          // margen bajo la línea del suelo, para que se vea la 
 var FONT = "Space Mono";
 var FLASH_LIFE = 400;
 var SPLASH_LIFE = 450;
+var MAX_EXTRAPOLATE = 0.05;  // s
+var FADE = 200;          // ms, aparición del botón al pasar el ratón
+var PANEL_DIM = 0.82;    // oscurecimiento de la lluvia con el panel abierto
+var WIND_SLOPE = 0.6;    // igual que en el motor
 
 var gname = null;
 var G = null;
+
+var panelOpen = false;
+var hover = false;
+var hoverT = 0;
+var toggleBox = null;    // [x0, y0, x1, y1] del botón, del último repintado
 
 function draw(name) {
     name = String(name);
@@ -34,6 +46,41 @@ function bang() {
     mgraphics.redraw();
 }
 
+// ---------------------------------------------------------------------------
+// ratón
+
+function onidle(x, y) {
+    if (!hover) {
+        hover = true;
+        hoverT = Date.now();
+    }
+}
+
+function onidleout() {
+    if (hover) {
+        hover = false;
+        hoverT = Date.now();
+    }
+}
+
+function onclick(x, y) {
+    var b = toggleBox;
+    if (!b || (!panelOpen && hoverAmount(Date.now()) < 0.2)) return;
+    if (x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3]) {
+        panelOpen = !panelOpen;
+        outlet(0, "panel", panelOpen ? 1 : 0);
+        mgraphics.redraw();
+    }
+}
+
+function hoverAmount(t) {
+    var k = (t - hoverT) / FADE;
+    k = k < 0 ? 0 : (k > 1 ? 1 : k);
+    return hover ? k : 1 - k;
+}
+
+// ---------------------------------------------------------------------------
+
 function rnd(seed, i) {
     var v = Math.sin(seed * 12.9898 + i * 78.233) * 43758.5453;
     return v - Math.floor(v);
@@ -45,18 +92,6 @@ function size() {
     return [box.rect[2] - box.rect[0], box.rect[3] - box.rect[1]];
 }
 
-// texto con espaciado entre letras, como el logo de la web (letter-spacing 0.2em)
-function spaced(str, x, y, track) {
-    var i, ch, w;
-    for (i = 0; i < str.length; i++) {
-        ch = str.charAt(i);
-        mgraphics.move_to(x, y);
-        mgraphics.show_text(ch);
-        w = mgraphics.text_measure(ch)[0];
-        x += w + track;
-    }
-}
-
 function paint() {
     var sz = size();
     var W = sz[0];
@@ -64,21 +99,30 @@ function paint() {
     var RH = H - GROUND;
     var t = Date.now();
     var S = G ? G.state : null;
+    var segs = [];
 
-    // fondo
     mgraphics.set_source_rgba(0, 0, 0, 1);
     mgraphics.rectangle(0, 0, W, H);
     mgraphics.fill();
 
     if (S) {
+        segs = dropSegments(S, W, RH, t);
         drawFlashGlow(S, W, RH, t);
-        drawDrops(S, W, RH);
+        drawDrops(segs);
         drawSplashes(S, W, RH, t);
         drawGround(S, W, RH, t);
-        drawHeader(S, W);
     } else {
         drawGround({ cols: [], mode: 0 }, W, RH, t);
     }
+
+    if (panelOpen) {
+        mgraphics.set_source_rgba(0, 0, 0, PANEL_DIM);
+        mgraphics.rectangle(0, 0, W, H);
+        mgraphics.fill();
+        segs = [];      // la lluvia queda atenuada detrás: sin negativo
+    }
+
+    drawHeader(W, t, segs);
 
     // scanlines
     mgraphics.set_source_rgba(0, 0, 0, 0.14);
@@ -86,40 +130,68 @@ function paint() {
     mgraphics.fill();
 }
 
-function drawDrops(S, W, RH) {
+// ---------------------------------------------------------------------------
+// gotas
+
+// Posición de cada gota en este instante: el motor da la del último paso y la
+// velocidad, y aquí se extrapola hasta ahora para que el movimiento sea continuo
+// aunque los repintados no caigan justo detrás de cada paso.
+function dropSegments(S, W, RH, t) {
     var drops = S.drops;
-    var tilt = S.windN * 0.6;
-    var buckets = [[], [], [], []];
-    var i, d, b;
-    if (!drops) return;
-    for (i = 0; i < drops.length; i++) {
-        d = drops[i];
-        if (!d) continue;
-        b = Math.min(3, Math.floor(d.s * 4));
-        buckets[b].push(d);
-    }
-    // dirección del trazo en píxeles: (tilt * W, RH) normalizado
-    var dx = tilt * W;
-    var dy = RH;
-    var len = Math.sqrt(dx * dx + dy * dy) || 1;
+    var out = [];
+    var dt, i, d, x, y, s, L, dx, dy, len;
+    if (!drops) return out;
+    dt = S.stepT ? (t - S.stepT) / 1000 : 0;
+    dt = dt < 0 ? 0 : (dt > MAX_EXTRAPOLATE ? MAX_EXTRAPOLATE : dt);
+
+    // dirección del trazo en píxeles
+    dx = S.windN * WIND_SLOPE * W;
+    dy = RH;
+    len = Math.sqrt(dx * dx + dy * dy) || 1;
     dx /= len;
     dy /= len;
 
+    for (i = 0; i < drops.length; i++) {
+        d = drops[i];
+        if (!d) continue;
+        y = d.y + d.vy * dt;
+        if (y > 1) y = 1;
+        x = d.x + S.windN * WIND_SLOPE * d.vy * dt;
+        x -= Math.floor(x);
+        s = d.s;
+        L = 4 + 10 * s + 8 * S.fallN;
+        x *= W;
+        y *= RH;
+        out.push({
+            x1: x - dx * L, y1: y - dy * L, x2: x, y2: y,
+            b: Math.min(3, Math.floor(s * 4))
+        });
+    }
+    return out;
+}
+
+function bucketWidth(b) {
+    return 0.6 + 1.4 * (b + 0.5) / 4;
+}
+
+function strokeSegs(segs, b) {
+    var i, g;
+    for (i = 0; i < segs.length; i++) {
+        g = segs[i];
+        if (g.b !== b) continue;
+        mgraphics.move_to(g.x1, g.y1);
+        mgraphics.line_to(g.x2, g.y2);
+    }
+    mgraphics.stroke();
+}
+
+function drawDrops(segs) {
+    var b;
     mgraphics.set_line_cap("round");
     for (b = 0; b < 4; b++) {
-        if (!buckets[b].length) continue;
-        var s = (b + 0.5) / 4;
-        var L = 4 + 10 * s + 8 * S.fallN;
-        mgraphics.set_line_width(0.6 + 1.4 * s);
-        mgraphics.set_source_rgba(1, 1, 1, 0.22 + 0.6 * s);
-        for (i = 0; i < buckets[b].length; i++) {
-            d = buckets[b][i];
-            var x = d.x * W;
-            var y = d.y * RH;
-            mgraphics.move_to(x - dx * L, y - dy * L);
-            mgraphics.line_to(x, y);
-        }
-        mgraphics.stroke();
+        mgraphics.set_line_width(bucketWidth(b));
+        mgraphics.set_source_rgba(1, 1, 1, 0.22 + 0.6 * (b + 0.5) / 4);
+        strokeSegs(segs, b);
     }
 }
 
@@ -201,7 +273,7 @@ function drawGround(S, W, RH, t) {
     mgraphics.stroke();
 
     if (!n) {
-        msg = (S.mode === 1) ? "toca notas" : "sin notas en el rango";
+        msg = (S.mode === 1) ? "Play notes" : "No notes in range";
         mgraphics.select_font_face(FONT);
         mgraphics.set_font_size(8);
         tw = mgraphics.text_measure(msg)[0];
@@ -211,15 +283,79 @@ function drawGround(S, W, RH, t) {
     }
 }
 
-function drawHeader(S, W) {
+// ---------------------------------------------------------------------------
+// textos de arriba: "midirain" y el botón, en negativo donde los cruza una gota
+
+function textWidth(str, track) {
+    var w = 0;
+    var i;
+    for (i = 0; i < str.length; i++) w += mgraphics.text_measure(str.charAt(i))[0] + track;
+    return w - track;
+}
+
+// texto con espaciado entre letras, como el logo de la web (letter-spacing 0.2em)
+function spaced(str, x, y, track, asPath) {
+    var i, ch;
+    for (i = 0; i < str.length; i++) {
+        ch = str.charAt(i);
+        mgraphics.move_to(x, y);
+        if (asPath) {
+            mgraphics.text_path(ch);
+        } else {
+            mgraphics.show_text(ch);
+        }
+        x += mgraphics.text_measure(ch)[0] + track;
+    }
+}
+
+// Pinta el texto en blanco y, recortando a la forma de las letras, vuelve a
+// pintar en negro los trozos de gota que las cruzan: el efecto "difference"
+// del cursor de la web. Si mgraphics no tuviera text_path o clip, queda el
+// texto normal.
+function negativeText(str, x, y, track, alpha, segs) {
+    var w = textWidth(str, track);
+    var hit = [];
+    var i, g, b;
+
+    mgraphics.set_source_rgba(1, 1, 1, alpha);
+    spaced(str, x, y, track, false);
+
+    for (i = 0; i < segs.length; i++) {
+        g = segs[i];
+        if (Math.max(g.x1, g.x2) + 2 < x || Math.min(g.x1, g.x2) - 2 > x + w) continue;
+        if (Math.max(g.y1, g.y2) + 2 < y - 10 || Math.min(g.y1, g.y2) - 2 > y + 3) continue;
+        hit.push(g);
+    }
+    if (!hit.length || alpha <= 0) return w;
+
+    try {
+        mgraphics.save();
+        spaced(str, x, y, track, true);
+        mgraphics.clip();
+        mgraphics.set_line_cap("round");
+        mgraphics.set_source_rgba(0, 0, 0, alpha);
+        for (b = 0; b < 4; b++) {
+            mgraphics.set_line_width(bucketWidth(b));
+            strokeSegs(hit, b);
+        }
+        mgraphics.restore();
+    } catch (e) {
+        mgraphics.restore();
+    }
+    return w;
+}
+
+function drawHeader(W, t, segs) {
+    var label, a, w, x;
     mgraphics.select_font_face(FONT);
     mgraphics.set_font_size(8);
-    mgraphics.set_source_rgba(1, 1, 1, 0.85);
-    spaced("midirain", 8, 13, 1.6);
 
-    var info = S.syncLabel || "";
-    var tw = mgraphics.text_measure(info)[0];
-    mgraphics.set_source_rgba(1, 1, 1, 0.35);
-    mgraphics.move_to(W - tw - 8, 13);
-    mgraphics.show_text(info);
+    negativeText("midirain", 10, 15, 1.6, 0.9, segs);
+
+    label = panelOpen ? "close ×" : "controls +";
+    a = panelOpen ? 1 : 0.7 * hoverAmount(t);
+    w = textWidth(label, 0);
+    x = W - 10 - w;
+    toggleBox = [x - 6, 3, W - 4, 21];
+    if (a > 0.01) negativeText(label, x, 15, 0, a, segs);
 }

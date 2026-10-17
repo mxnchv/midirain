@@ -7,46 +7,56 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono&display=swap" rel="stylesheet">
 <style>
-  /* Vista previa fuera de Live: ejecuta midirain_engine.js y midirain_ui.js tal cual,
-     con stubs de outlet / Global / mgraphics sobre un canvas. Sin audio. */
+  /* Vista previa fuera de Live: ejecuta midirain_engine.js, midirain_ui.js y
+     midirain_knob.js tal cual, con stubs de outlet / Global / mgraphics sobre
+     canvas. Los menús son HTML en el sitio de los live.*. Sin audio. */
   :root { --grey-dim: rgba(255,255,255,0.35); color-scheme: dark; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #000; color: #fff; font-family: 'Space Mono', 'Courier New', monospace;
+  body { background: #111; color: #fff; font-family: 'Space Mono', 'Courier New', monospace;
          min-height: 100vh; display: grid; place-items: center; padding: 16px; }
-  .device { display: flex; border: 1px solid #1c1c1c; max-width: 100%; }
-  canvas { display: block; width: 300px; height: 169px; border-right: 1px solid #1c1c1c; }
-  .ctl { width: 280px; min-height: 169px; padding: 8px 12px; display: grid; grid-template-columns: 1fr 1fr;
-         gap: 4px 12px; font-size: 9px; color: rgba(255,255,255,0.5); align-content: start; }
-  .knobs { grid-column: 1 / -1; display: flex; gap: 12px; }
-  label { display: flex; flex-direction: column; gap: 2px; }
-  input[type=range] { accent-color: #fff; width: 100%; }
-  select, input[type=number] { background: #000; color: #fff; border: 1px solid rgba(255,255,255,0.35);
-         font: inherit; font-size: 9px; padding: 1px 2px; }
+  .device { position: relative; width: 400px; height: 169px; outline: 1px solid #1c1c1c; background: #000; }
+  #c { display: block; width: 400px; height: 169px; }
+  #panel { position: absolute; inset: 0; display: none; pointer-events: none; }
+  #panel.open { display: block; }
+  #panel > * { position: absolute; pointer-events: auto; }
+  #panel .lbl { font-size: 8px; color: rgba(255,255,255,0.5); pointer-events: none; }
+  #panel canvas { width: 60px; height: 72px; cursor: ns-resize; touch-action: none; }
+  select, input[type=number] { background: #000; color: #fff; border: 1px solid rgba(255,255,255,0.3);
+         font: inherit; font-size: 8px; height: 15px; padding: 0 3px; border-radius: 0; }
+  .tabs { display: flex; }
+  .tabs button { width: 38px; height: 14px; font: inherit; font-size: 8px; background: #000;
+         color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.3); }
+  .tabs button.on { background: #fff; color: #000; }
   .log { position: fixed; bottom: 12px; left: 16px; right: 16px; font-size: 10px;
          color: var(--grey-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  @media (max-width: 620px) { .device { flex-direction: column; } canvas { border-right: 0; border-bottom: 1px solid #1c1c1c; } }
+  @media (max-width: 440px) { .device { transform: scale(0.85); transform-origin: center; } }
 </style>
 </head>
 <body>
 <div class="device">
-  <canvas id="c" width="600" height="338"></canvas>
-  <div class="ctl" id="ctl"></div>
+  <canvas id="c" width="1200" height="507"></canvas>
+  <div id="panel"></div>
 </div>
 <div class="log" id="log">—</div>
 <script>
 (async function () {
-  var W = 300, H = 169, DPR = 2;
-  var cv = document.getElementById('c');
+  var W = 400, H = 169, DPR = 3;
   var globals = {};
   function Global(name) { return globals[name] || (globals[name] = {}); }
 
   // mgraphics sobre canvas 2D (subconjunto que usan los jsui de midirain)
   function rgba(r, gg, b, a) { return 'rgba(' + (r * 255 | 0) + ',' + (gg * 255 | 0) + ',' + (b * 255 | 0) + ',' + a + ')'; }
   function makeMg(canvas, w, h) {
-    var g = canvas.getContext('2d');
+    var main = canvas.getContext('2d');
+    var g = main;
     var font = { face: 'Space Mono', size: 8 };
     var pt = [0, 0];
+    var glyphs = [];        // text_path pendiente
+    var masks = [];         // pila de save(): recorte por texto activo en ese nivel
     function setFont() { g.font = font.size + 'px "' + font.face + '"'; }
+    function grad(gr) {
+      return { _g: gr, add_color_stop_rgba: function (o, r, gg, b, a) { gr.addColorStop(o, rgba(r, gg, b, a)); } };
+    }
     var mg = {
       relative_coords: 0, autofill: 0, size: [w, h], dirty: true,
       init: function () {}, redraw: function () { mg.dirty = true; },
@@ -59,44 +69,82 @@
       move_to: function (x, y) { pt = [x, y]; g.moveTo(x, y); }, line_to: function (x, y) { g.lineTo(x, y); },
       arc: function (x, y, r, a1, a2) { g.arc(x, y, r, a1, a2); },
       fill: function () { g.fill(); g.beginPath(); }, stroke: function () { g.stroke(); g.beginPath(); },
-      save: function () { g.save(); }, restore: function () { g.restore(); },
       translate: function (x, y) { g.translate(x, y); }, scale: function (x, y) { g.scale(x, y); },
       set_line_width: function (lw) { g.lineWidth = lw; }, set_line_cap: function (c) { g.lineCap = c; },
       select_font_face: function (f) { font.face = f; setFont(); },
       set_font_size: function (sz) { font.size = sz; setFont(); },
       text_measure: function (str) { return [g.measureText(str).width, font.size]; },
       show_text: function (str) { g.fillText(str, pt[0], pt[1]); pt[0] += g.measureText(str).width; },
-      // pinta si hay algo pendiente
+      // canvas no recorta por texto: lo imitamos pintando en un canvas aparte y
+      // enmascarándolo con las letras al hacer restore()
+      text_path: function (str) { glyphs.push({ s: str, x: pt[0], y: pt[1], font: g.font, m: g.getTransform() }); pt[0] += g.measureText(str).width; },
+      clip: function () {
+        var off = document.createElement('canvas');
+        off.width = canvas.width; off.height = canvas.height;
+        var og = off.getContext('2d');
+        og.setTransform(g.getTransform());
+        og.font = g.font; og.lineCap = g.lineCap; og.lineWidth = g.lineWidth;
+        masks[masks.length - 1] = { off: off, glyphs: glyphs, parent: g };
+        glyphs = [];
+        g.beginPath();
+        g = og;
+      },
+      save: function () { g.save(); masks.push(null); },
+      restore: function () {
+        var m = masks.pop();
+        if (m) {
+          var og = g;
+          var mask = document.createElement('canvas');
+          mask.width = canvas.width; mask.height = canvas.height;
+          var mk = mask.getContext('2d');
+          mk.fillStyle = '#fff';
+          m.glyphs.forEach(function (gl) { mk.setTransform(gl.m); mk.font = gl.font; mk.fillText(gl.s, gl.x, gl.y); });
+          og.setTransform(1, 0, 0, 1, 0, 0);
+          og.globalCompositeOperation = 'destination-in';
+          og.drawImage(mask, 0, 0);
+          g = m.parent;
+          var t = g.getTransform();
+          g.setTransform(1, 0, 0, 1, 0, 0);
+          g.drawImage(m.off, 0, 0);
+          g.setTransform(t);
+        }
+        g.restore();
+        glyphs = [];
+      },
       frame: function (paint) {
         if (!mg.dirty) return;
         mg.dirty = false;
+        g.setTransform(1, 0, 0, 1, 0, 0);
+        g.clearRect(0, 0, canvas.width, canvas.height);    // como jsui: cada paint empieza vacío
         g.setTransform(DPR, 0, 0, DPR, 0, 0);
         g.beginPath();
         paint();
       }
     };
-    function grad(gr) {
-      return { _g: gr, add_color_stop_rgba: function (o, r, gg, b, a) { gr.addColorStop(o, rgba(r, gg, b, a)); } };
-    }
     return mg;
   }
 
-  var NAMES = ['bang', 'tick', 'grid', 'note', 'density', 'fall', 'wind', 'dur', 'mode', 'tonic', 'scale', 'low', 'high', 'sync', 'draw', 'paint', 'msg_float'];
+  var NAMES = ['bang', 'tick', 'grid', 'note', 'density', 'fall', 'wind', 'dur', 'mode', 'tonic', 'scale',
+    'low', 'high', 'sync', 'draw', 'paint', 'msg_float', 'onidle', 'onidleout', 'onclick'];
   function load(src, env) {
     var ret = '{' + NAMES.map(function (n) { return n + ': typeof ' + n + ' === "function" ? ' + n + ' : null'; }).join(',') + '}';
     var f = new Function('outlet', 'Global', 'jsarguments', 'mgraphics', 'box', 'post',
       'var inlets, outlets, autowatch;\n' + src + '\nreturn ' + ret + ';');
-    var mg = env.mg || makeMg(document.createElement('canvas'), 1, 1);
-    return f(env.outlet || function () {}, Global, env.jsarguments, mg, { rect: [0, 0].concat(mg.size) }, function () {});
+    return f(env.outlet || function () {}, Global, env.jsarguments, env.mg, { rect: [0, 0].concat(env.mg ? env.mg.size : [0, 0]) }, function () {});
   }
 
-  var notes = [];
-  var rainMg = makeMg(cv, W, H);
-  var log = document.getElementById('log');
-  var NN = ['c', 'c#', 'd', 'd#', 'e', 'f', 'f#', 'g', 'g#', 'a', 'a#', 'b'];
   await document.fonts.load('9px "Space Mono"');
-  var ui = load(await (await fetch('../midirain_ui.js')).text(), { jsarguments: ['midirain_ui.js'], mg: rainMg });
-  var knobSrc = await (await fetch('../midirain_knob.js')).text();
+  var cv = document.getElementById('c');
+  var panel = document.getElementById('panel');
+  var log = document.getElementById('log');
+  var notes = [];
+  var NN = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  var rainMg = makeMg(cv, W, H);
+
+  var ui = load(await (await fetch('../midirain_ui.js')).text(), {
+    jsarguments: ['midirain_ui.js'], mg: rainMg,
+    outlet: function (n, sel, v) { if (sel === 'panel') panel.classList.toggle('open', !!v); }
+  });
   var engine = load(await (await fetch('../midirain_engine.js')).text(), {
     jsarguments: ['midirain_engine.js', 'preview'],
     outlet: function (n) {
@@ -108,25 +156,26 @@
       } else if (n === 1) ui.draw(a[1]);
     }
   });
-  window.midirain = { engine: engine, ui: ui };
+  var knobSrc = await (await fetch('../midirain_knob.js')).text();
 
-  // controles mínimos
-  var ctl = document.getElementById('ctl');
-  function add(html, sel, fn) {
-    var l = document.createElement('label'); l.innerHTML = html; ctl.appendChild(l);
-    var el = l.querySelector(sel); el.addEventListener('input', function () { fn(el); }); fn(el);
-  }
+  // ratón sobre la lluvia, como en el jsui
+  function local(e) { var r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height]; }
+  cv.addEventListener('mousemove', function (e) { var p = local(e); ui.onidle(p[0], p[1]); });
+  cv.addEventListener('mouseleave', function () { ui.onidleout(); });
+  cv.addEventListener('click', function (e) { var p = local(e); ui.onclick(p[0], p[1]); });
+  // el botón también tiene que funcionar con el panel abierto (no lo tapa ningún control)
+  panel.addEventListener('click', function (e) { if (e.target === panel) { var p = local(e); ui.onclick(p[0], p[1]); } });
+
+  function place(el, x, y) { el.style.left = x + 'px'; el.style.top = y + 'px'; panel.appendChild(el); return el; }
+  function lbl(text, x, y) { var d = document.createElement('div'); d.className = 'lbl'; d.textContent = text; place(d, x, y - 9); }
+
   // knobs: el jsui real encima de un "live.dial" simulado (arrastre vertical)
   var knobs = [];
-  var knobRow = document.createElement('div');
-  knobRow.className = 'knobs';
-  ctl.appendChild(knobRow);
-  function knob(label, lo, hi, expo, init, unit, fn) {
+  function knob(label, x, lo, hi, expo, init, unit, fn) {
     var c = document.createElement('canvas');
-    c.width = 52 * DPR; c.height = 50 * DPR;
-    c.style.cssText = 'width:52px;height:50px;border:0;cursor:ns-resize;touch-action:none';
-    knobRow.appendChild(c);
-    var mg = makeMg(c, 52, 50);
+    c.width = 60 * DPR; c.height = 72 * DPR;
+    place(c, x, 26);
+    var mg = makeMg(c, 60, 72);
     var k = load(knobSrc, { jsarguments: ['midirain_knob.js', label, lo, hi, expo, init].concat(unit ? [unit] : []), mg: mg });
     var pos = Math.pow((init - lo) / (hi - lo), 1 / expo);
     function set() { var v = lo + (hi - lo) * Math.pow(pos, expo); k.msg_float(v); fn(v); }
@@ -140,16 +189,43 @@
     set();
     knobs.push({ mg: mg, k: k, set: function (p) { pos = p; set(); } });
   }
-  knob('densidad', 0, 100, 1, 30, '%', function (v) { engine.density(v); });
-  knob('caída', 0, 100, 1, 40, '%', function (v) { engine.fall(v); });
-  knob('viento', -100, 100, 1, 0, '', function (v) { engine.wind(v); });
-  knob('duración', 10, 2000, 3, 150, 'ms', function (v) { engine.dur(v); });
-  window.midirain.knobs = knobs;
-  add('modo<select><option>escala<option>midi</select>', 'select', function (e) { engine.mode(e.selectedIndex); });
-  add('tónica<select>' + NN.map(function (n) { return '<option>' + n; }).join('') + '</select>', 'select', function (e) { engine.tonic(e.selectedIndex); });
-  add('escala<select><option>mayor<option selected>menor<option>dórica<option>frigia<option>lidia<option>mixolidia<option>menor armónica<option>pentatónica mayor<option>pentatónica menor<option>blues<option>cromática</select>', 'select', function (e) { engine.scale(e.selectedIndex); });
-  add('grave<input type=number min=0 max=127 value=48>', 'input', function (e) { engine.low(+e.value); });
-  add('aguda<input type=number min=0 max=127 value=72>', 'input', function (e) { engine.high(+e.value); });
+  knob('Density', 14, 0, 100, 1, 30, '%', function (v) { engine.density(v); });
+  knob('Fall', 84, 0, 100, 1, 40, '%', function (v) { engine.fall(v); });
+  knob('Wind', 154, -100, 100, 1, 10, '', function (v) { engine.wind(v); });
+  knob('Length', 224, 10, 2000, 3, 150, 'ms', function (v) { engine.dur(v); });
+
+  function select(label, x, y, w, items, init, fn) {
+    lbl(label, x, y - 4);
+    var s = document.createElement('select');
+    s.innerHTML = items.map(function (it, i) { return '<option' + (i === init ? ' selected' : '') + '>' + it; }).join('');
+    s.style.width = w + 'px';
+    s.addEventListener('input', function () { fn(s.selectedIndex); });
+    place(s, x, y); fn(init);
+  }
+  function number(label, x, y, init, fn) {
+    lbl(label, x, y - 4);
+    var n = document.createElement('input'); n.type = 'number'; n.min = 0; n.max = 127; n.value = init; n.style.width = '54px';
+    n.addEventListener('input', function () { fn(+n.value); });
+    place(n, x, y); fn(init);
+  }
+
+  lbl('Mode', 300, 40);
+  var tabs = place(document.createElement('div'), 300, 44); tabs.className = 'tabs';
+  ['Scale', 'MIDI'].forEach(function (t, i) {
+    var b = document.createElement('button'); b.textContent = t; if (!i) b.className = 'on';
+    b.addEventListener('click', function () {
+      tabs.querySelectorAll('button').forEach(function (o) { o.className = ''; }); b.className = 'on'; engine.mode(i);
+    });
+    tabs.appendChild(b);
+  });
+  select('Sync', 300, 76, 76, ['Free', '1/32', '1/16', '1/8', '1/4'], 0, function (i) { engine.sync(i); });
+  select('Root', 14, 128, 54, NN, 0, function (i) { engine.tonic(i); });
+  select('Scale', 76, 128, 130, ['Major', 'Minor', 'Dorian', 'Phrygian', 'Lydian', 'Mixolydian', 'Harmonic Minor',
+    'Major Pentatonic', 'Minor Pentatonic', 'Blues', 'Chromatic'], 1, function (i) { engine.scale(i); });
+  number('Low', 214, 128, 48, function (v) { engine.low(v); });
+  number('High', 276, 128, 72, function (v) { engine.high(v); });
+
+  window.midirain = { engine: engine, ui: ui, knobs: knobs, globals: globals };
 
   setInterval(engine.bang, 10);
   (function frame() {

@@ -24,11 +24,11 @@ var MAX_SPLASHES = 160;
 var SPLASH_LIFE = 450;      // ms
 var FLASH_LIFE = 400;       // ms
 var MAX_DT = 0.1;           // s, recorte de delta-time por frame
-var DRAW_EVERY = 33;        // ms, ~30 fps de mensajes a la UI
+var DRAW_EVERY = 16;        // ms, ~60 fps de mensajes a la UI
 var FALLBACK_MS = 400;      // sin pulsos de rejilla durante esto -> suena ya (mínimo)
 var WIND_SLOPE = 0.6;       // desplazamiento x por unidad de caída con viento al 100 %
 
-var NOTE_NAMES = ["c", "c#", "d", "d#", "e", "f", "f#", "g", "g#", "a", "a#", "b"];
+var NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
 var SCALES = [
     [0, 2, 4, 5, 7, 9, 11],         // Mayor
@@ -46,7 +46,7 @@ var SCALES = [
 
 // índice del menú Sync -> valor de nota para el metro tempo-relativo
 var SYNC_VALUES = [null, "32n", "16n", "8n", "4n"];
-var SYNC_LABELS = ["libre", "1/32", "1/16", "1/8", "1/4"];
+var SYNC_LABELS = ["Free", "1/32", "1/16", "1/8", "1/4"];
 var SYNC_BEATS = [0, 0.125, 0.25, 0.5, 1];
 
 // ---------------------------------------------------------------------------
@@ -64,7 +64,7 @@ var shared = new Global(GNAME);
 var P = {
     density: 30,    // %
     fall: 40,       // %
-    wind: 0,        // -100..100
+    wind: 10,       // -100..100, un poco de inclinación por defecto
     dur: 150,       // ms
     mode: 0,        // 0 Escala, 1 MIDI
     tonic: 0,
@@ -86,7 +86,8 @@ var S = {
     windN: 0,
     fallN: 0.4,
     rate: 0,
-    syncLabel: "libre"
+    stepT: 0,       // ms del último paso: la UI extrapola desde aquí
+    syncLabel: "Free"
 };
 shared.state = S;
 
@@ -219,6 +220,7 @@ function step(dt, t) {
     }
 
     S.drops = drops;
+    S.stepT = t;
     S.windN = windN;
     S.fallN = P.fall / 100;
     S.rate = spawnRate();

@@ -60,8 +60,8 @@ test("columnas por defecto: Do menor de 48 a 72", function () {
     var e = load();
     assert.deepStrictEqual(Array.from(e.state().cols),
         [48, 50, 51, 53, 55, 56, 58, 60, 62, 63, 65, 67, 68, 70, 72]);
-    assert.strictEqual(e.state().labels[0], "c2");
-    assert.strictEqual(e.state().labels[7], "c3");     // C3 = 60
+    assert.strictEqual(e.state().labels[0], "C2");
+    assert.strictEqual(e.state().labels[7], "C3");     // C3 = 60
 });
 
 test("cada escala respeta tónica y rango", function () {
@@ -273,15 +273,27 @@ test("volver a Libre para el metro y vacía la cola", function () {
     assert.strictEqual(notesOf(e.out).length, 1);
 });
 
-test("la UI recibe draw <nombreGlobal> a ~30 fps y el nombre es único por instancia", function () {
+test("la UI recibe draw <nombreGlobal> a ~60 fps y el nombre es único por instancia", function () {
     var e = load({ arg: "777mr" });
     e.ctx.density(0);
     for (var i = 0; i < 100; i++) { e.advance(10); e.ctx.bang(); }
     var draws = outOf(e.out, 1);
-    assert.ok(draws.length >= 25 && draws.length <= 34, "draws: " + draws.length);
+    assert.ok(draws.length >= 50 && draws.length <= 64, "draws: " + draws.length);
     assert.deepStrictEqual(draws[0], ["draw", "midirain_777mr"]);
     var f = load({ arg: "---mr" });
     assert.ok(Object.keys(f.globals)[0] !== "midirain_---mr");
+});
+
+test("viento por defecto en 10 y marca de tiempo del paso para que la UI extrapole", function () {
+    var e = load();
+    var c = e.ctx;
+    c.density(0);
+    e.advance(10); c.bang();
+    e.state().drops = [{ x: 0.5, y: 0, vy: 1, s: 0.5 }];
+    e.advance(100); c.bang();
+    assert.ok(Math.abs(e.state().drops[0].x - (0.5 + 0.1 * 0.6 * 0.1)) < 1e-9);
+    assert.strictEqual(e.state().stepT, e.clock.t);
+    assert.strictEqual(e.state().windN, 0.1);
 });
 
 test("tick y grid marcados como immediate", function () {

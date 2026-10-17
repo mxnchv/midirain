@@ -1,6 +1,6 @@
 // midirain_knob.js
-// Knob de midirain en [jsui], al estilo de mxnchv.xyz: aro de 1 px y un punto
-// blanco que lo recorre. Solo dibuja: va encima de un live.dial transparente
+// Knob de midirain en [jsui]: aro gris abierto por abajo, el recorrido en blanco
+// y debajo el nombre y el valor. Solo dibuja: va encima de un live.dial transparente
 // (con ignoreclick), que es el que recibe el ratón, la automatización y el
 // MIDI map, y le manda su valor por la entrada. ES5.
 //
@@ -74,30 +74,23 @@ function paint() {
     var W = sz[0];
     var H = sz[1];
     var cx = W / 2;
-    var cy = 25;
-    var r = 11;
+    var cy = 22;
+    var r = 17;
     var p = position();
     var a = A0 + p * (A1 - A0);
     var from = (lo < 0) ? 1.5 * Math.PI : A0;   // bipolar: desde arriba
 
-    mgraphics.set_source_rgba(0, 0, 0, 1);
-    mgraphics.rectangle(0, 0, W, H);
-    mgraphics.fill();
+    mgraphics.set_line_cap("round");
+    mgraphics.set_line_width(2.5);
 
-    mgraphics.select_font_face(FONT);
-    mgraphics.set_font_size(9);
-    mgraphics.set_source_rgba(1, 1, 1, 0.5);
-    centered(label, cx, 9);
-
-    // aro
-    mgraphics.set_line_width(1);
-    mgraphics.set_source_rgba(1, 1, 1, 0.16);
+    // aro, abierto por abajo
+    mgraphics.set_source_rgba(1, 1, 1, 0.28);
     arcFrom(cx, cy, r, A0, A1);
     mgraphics.stroke();
 
     // recorrido hasta el valor
     if (Math.abs(a - from) > 0.001) {
-        mgraphics.set_source_rgba(1, 1, 1, 0.7);
+        mgraphics.set_source_rgba(1, 1, 1, 1);
         if (a > from) {
             arcFrom(cx, cy, r, from, a);
         } else {
@@ -106,12 +99,12 @@ function paint() {
         mgraphics.stroke();
     }
 
-    // punto
-    mgraphics.set_source_rgba(1, 1, 1, 1);
-    mgraphics.ellipse(cx + Math.cos(a) * r - 2.5, cy + Math.sin(a) * r - 2.5, 5, 5);
-    mgraphics.fill();
-
+    mgraphics.select_font_face(FONT);
     mgraphics.set_font_size(8);
-    mgraphics.set_source_rgba(1, 1, 1, 0.8);
-    centered(format(), cx, 48);
+    mgraphics.set_source_rgba(1, 1, 1, 0.5);
+    centered(label, cx, 54);
+
+    mgraphics.set_font_size(9);
+    mgraphics.set_source_rgba(1, 1, 1, 1);
+    centered(format(), cx, 66);
 }
