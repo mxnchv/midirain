@@ -250,7 +250,6 @@ for ctl, _ in CONTROLS:
 
 obj("tick", "metro 10", [20, 290, 60, 22], 2, 1, ["bang"])
 wire("init", "tick", outlet=0)
-wire("thisdevice", "lompath")
 
 comment("c_sync", "rejilla del transporte (el motor la configura)", [200, 260, 280, 18])
 obj("gridmetro", "metro 16n @quantize 16n", [200, 290, 150, 22], 2, 1, ["bang"])
@@ -264,6 +263,7 @@ obj("obs_playing", "live.observer @property is_playing", [380, 350, 190, 22], 2,
 obj("obs_tempo", "live.observer @property tempo", [580, 350, 170, 22], 2, 2, ["", ""])
 obj("p_playing", "prepend playing", [380, 380, 100, 22], 1, 1)
 obj("p_tempo", "prepend tempo", [580, 380, 90, 22], 1, 1)
+wire("thisdevice", "lompath")
 wire("lompath", "lompathobj")
 wire("lompathobj", "obs_playing", 0, 1)
 wire("lompathobj", "obs_tempo", 0, 1)

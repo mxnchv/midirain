@@ -36,7 +36,7 @@ El `.amxd` se genera escribiendo a mano su contenedor binario, y ese formato no 
 
 Las gotas grandes son más gruesas y rápidas, y suenan más fuerte (velocity 30–127).
 
-Con **sync** activo y el transporte parado no llegan pulsos de la rejilla. Si pasa más de 400 ms sin pulsos (o 1,5 veces el intervalo de la rejilla, si es mayor), las notas encoladas suenan al momento.
+Con **sync** activo, el motor lee de Live el estado del transporte y el tempo (`live.observer`). Con el transporte parado, las notas suenan al momento. Como red de seguridad, si pasan más de 400 ms sin pulsos (o 1,5 veces el intervalo de la rejilla, si es mayor), las notas encoladas también suenan.
 
 ## Arquitectura
 
@@ -45,6 +45,7 @@ Con **sync** activo y el transporte parado no llegan pulsos de la rejilla. Si pa
 - Salida: motor → `[unpack 0 0 0]` → `[makenote]` → `[pack 0 0]` → `[midiformat]` → `[midiout]`. Al desactivar el dispositivo, `makenote` recibe `stop` y apaga todo lo que suena.
 - Entrada: `[midiin]` → `[midiparse]` → `[prepend note]` → motor. Las notas de entrada no pasan a la salida.
 - Sync: el motor configura un `[metro 16n @quantize 16n]` tempo-relativo (`interval`, `quantize`, `1`/`0`) que le devuelve `grid` en cada pulso.
+- Transporte: `[live.path]` → `[live.observer @property is_playing]` y `[live.observer @property tempo]` → motor (`playing`, `tempo`).
 
 ## Desarrollo
 
