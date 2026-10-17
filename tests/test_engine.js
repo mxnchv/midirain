@@ -209,19 +209,54 @@ test("sync: sin pulsos durante más de 400 ms, suena inmediatamente", function (
     assert.strictEqual(notesOf(e.out).length, 2);
 });
 
-test("sync lento: la ventana del fallback se adapta al intervalo de la rejilla", function () {
+test("sync lento: con el tempo de Live, espera el pulso aunque tarde más de 400 ms", function () {
     var e = load();
     var c = e.ctx;
     c.density(0);
+    c.tempo(60);
+    c.playing(1);
     c.sync(4);                                  // 1/4 a 60 bpm = 1000 ms
-    c.grid(); e.advance(1000); c.grid();
+    c.grid();                                   // primer pulso: aún no hay intervalo medido
     e.advance(10); c.bang();
     e.state().drops = [{ x: 0.5, y: 0.999, vy: 1, s: 0.5 }];
     e.advance(10); c.bang();
-    for (var i = 0; i < 90; i++) { e.advance(10); c.bang(); }   // 920 ms tras el pulso
+    for (var i = 0; i < 97; i++) { e.advance(10); c.bang(); }   // 990 ms tras el pulso
     assert.strictEqual(notesOf(e.out).length, 0, "no se adelanta al pulso");
-    e.advance(80); c.grid();
+    e.advance(10); c.grid();
     assert.strictEqual(notesOf(e.out).length, 1);
+});
+
+test("sync: al activarlo con el transporte en marcha, espera el primer pulso", function () {
+    var e = load();
+    var c = e.ctx;
+    c.density(0);
+    c.tempo(60);
+    c.playing(1);
+    e.advance(10); c.bang();
+    c.sync(3);                                  // 1/8 a 60 bpm = 500 ms, aún sin pulsos
+    e.state().drops = [{ x: 0.5, y: 0.999, vy: 1, s: 0.5 }];
+    for (var i = 0; i < 45; i++) { e.advance(10); c.bang(); }
+    assert.strictEqual(notesOf(e.out).length, 0);
+    c.grid();
+    assert.strictEqual(notesOf(e.out).length, 1);
+});
+
+test("sync: con el transporte parado suena en el mismo tick, y al parar se vacía la cola", function () {
+    var e = load();
+    var c = e.ctx;
+    c.density(0);
+    c.playing(1);
+    c.sync(2);
+    c.grid();
+    e.advance(10); c.bang();
+    e.state().drops = [{ x: 0.5, y: 0.999, vy: 1, s: 0.5 }];
+    e.advance(10); c.bang();
+    assert.strictEqual(notesOf(e.out).length, 0, "encolada");
+    c.playing(0);
+    assert.strictEqual(notesOf(e.out).length, 1, "al parar suena la cola");
+    e.state().drops = [{ x: 0.1, y: 0.999, vy: 1, s: 0.5 }];
+    e.advance(10); c.bang();
+    assert.strictEqual(notesOf(e.out).length, 2, "parado: inmediato");
 });
 
 test("volver a Libre para el metro y vacía la cola", function () {

@@ -7,6 +7,8 @@
 //   bang              tick de simulación (desde [metro 10])
 //   grid              pulso de la rejilla del transporte (desde el metro de sync)
 //   note p v          nota de la entrada MIDI (modo MIDI)
+//   playing 0|1       estado del transporte de Live (live.observer is_playing)
+//   tempo bpm         tempo de Live (live.observer tempo)
 //   density / fall / wind / dur / mode / tonic / scale / low / high / sync <valor>
 // Salida:
 //   outlet 0          pitch velocity duración  ->  [unpack 0 0 0] -> [makenote]
@@ -23,7 +25,7 @@ var SPLASH_LIFE = 450;      // ms
 var FLASH_LIFE = 400;       // ms
 var MAX_DT = 0.1;           // s, recorte de delta-time por frame
 var DRAW_EVERY = 33;        // ms, ~30 fps de mensajes a la UI
-var FALLBACK_MS = 400;      // sin pulsos de rejilla durante esto -> suena ya
+var FALLBACK_MS = 400;      // sin pulsos de rejilla durante esto -> suena ya (mínimo)
 var WIND_SLOPE = 0.6;       // desplazamiento x por unidad de caída con viento al 100 %
 
 var NOTE_NAMES = ["c", "c#", "d", "d#", "e", "f", "f#", "g", "g#", "a", "a#", "b"];
@@ -45,6 +47,7 @@ var SCALES = [
 // índice del menú Sync -> valor de nota para el metro tempo-relativo
 var SYNC_VALUES = [null, "32n", "16n", "8n", "4n"];
 var SYNC_LABELS = ["libre", "1/32", "1/16", "1/8", "1/4"];
+var SYNC_BEATS = [0, 0.125, 0.25, 0.5, 1];
 
 // ---------------------------------------------------------------------------
 // Global compartido con la UI. M4L sustituye "---" por un ID único por instancia;
@@ -92,8 +95,9 @@ var queue = [];         // notas encoladas en modo sync: {p, v}
 var spawnAcc = 0;
 var lastTick = 0;
 var lastDraw = 0;
-var lastGrid = 0;
-var gridInterval = 0;
+var lastGrid = 0;          // último pulso de rejilla, o el momento en que empezamos a esperarlo
+var transportOn = -1;      // -1 desconocido, 0 parado, 1 en marcha
+var bpm = 120;
 
 function now() {
     return Date.now();
@@ -276,9 +280,13 @@ function flush() {
     for (i = 0; i < q.length; i++) play(q[i].p, q[i].v, t);
 }
 
+function gridInterval() {
+    return SYNC_BEATS[P.sync] * 60000 / bpm;
+}
+
 function fallbackWindow() {
-    // con rejillas lentas (1/4 a poco tempo) el hueco normal supera 400 ms
-    return Math.max(FALLBACK_MS, gridInterval * 1.5);
+    // con rejillas lentas (1/4 a poco tempo) el hueco normal entre pulsos supera 400 ms
+    return Math.max(FALLBACK_MS, gridInterval() * 1.5);
 }
 
 // ---------------------------------------------------------------------------
@@ -297,8 +305,9 @@ function tick() {
 
     step(dt, t);
 
-    if (P.sync !== 0 && queue.length && t - lastGrid > fallbackWindow()) {
-        flush();    // transporte parado: no hay pulsos, suena inmediatamente
+    // transporte parado (o pulsos que no llegan): suena inmediatamente
+    if (P.sync !== 0 && queue.length && (transportOn === 0 || t - lastGrid > fallbackWindow())) {
+        flush();
     }
 
     if (t - lastDraw >= DRAW_EVERY) {
@@ -309,12 +318,24 @@ function tick() {
 tick.immediate = 1;
 
 function grid() {
-    var t = now();
-    if (lastGrid && t - lastGrid < 4000) gridInterval = t - lastGrid;
-    lastGrid = t;
+    lastGrid = now();
     flush();
 }
 grid.immediate = 1;
+
+function playing(v) {
+    transportOn = Number(v) ? 1 : 0;
+    if (transportOn) {
+        lastGrid = now();   // espera el primer pulso, como mucho una ventana
+    } else {
+        flush();
+    }
+}
+playing.immediate = 1;
+
+function tempo(v) {
+    if (Number(v) > 0) bpm = Number(v);
+}
 
 function note(p, v) {
     p = Math.floor(p);
@@ -362,8 +383,7 @@ function sync(v) {
     var i = clamp(Math.floor(v), 0, SYNC_VALUES.length - 1);
     P.sync = i;
     S.syncLabel = SYNC_LABELS[i];
-    lastGrid = 0;
-    gridInterval = 0;
+    lastGrid = now();
     if (i === 0) {
         outlet(2, 0);
         flush();
