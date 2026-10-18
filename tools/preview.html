@@ -7,9 +7,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono&display=swap" rel="stylesheet">
 <style>
-  /* Vista previa fuera de Live: ejecuta midirain_engine.js, midirain_ui.js y
-     midirain_knob.js tal cual, con stubs de outlet / Global / mgraphics sobre
-     canvas. Los menús son HTML en el sitio de los live.*. Sin audio. */
+  /* Vista previa fuera de Live: ejecuta midirain_engine.js y midirain_ui.js tal cual,
+     con stubs de outlet / Global / mgraphics sobre canvas. Los knobs y menús
+     imitan a los live.* (dibujados aquí, aproximados). Sin audio. */
   :root { --grey-dim: rgba(255,255,255,0.35); color-scheme: dark; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #111; color: #fff; font-family: 'Space Mono', 'Courier New', monospace;
@@ -19,8 +19,9 @@
   .sep { position: absolute; left: 302px; top: 0; width: 1px; height: 169px; background: #1c1c1c; }
   #panel > * { position: absolute; }
   #panel canvas { width: 60px; height: 72px; cursor: ns-resize; touch-action: none; }
-  #panel .lbl { font-size: 8px; color: rgba(255,255,255,0.5); }
-  #panel .credit { font-size: 8px; color: rgba(255,255,255,0.35); }
+  #panel { font-family: "Ableton Sans Medium", Helvetica, Arial, sans-serif; }
+  #panel .lbl { font-size: 9px; color: rgba(255,255,255,0.5); }
+  #panel .credit { font-size: 9px; color: rgba(255,255,255,0.35); }
   select, input[type=number] { background: #000; color: #fff; border: 1px solid rgba(255,255,255,0.3);
          font: inherit; font-size: 8px; height: 15px; padding: 0 3px; border-radius: 0; }
   .tabs { display: flex; }
@@ -176,22 +177,36 @@
     }
   });
   var knobs = [];
-  var knobSrc = await (await fetch('../midirain_knob.js')).text();
 
   // mismas posiciones que en tools/build_device.py (layout A)
   var CX = 312, MX = CX + 140;
   function place(el, x, y) { el.style.left = x + 'px'; el.style.top = y + 'px'; panel.appendChild(el); return el; }
   function lbl(text, x, y) { var d = document.createElement('div'); d.className = 'lbl'; d.textContent = text; place(d, x, y - 9); }
 
-  // knobs: el jsui real encima de un "live.dial" simulado (arrastre vertical)
+  // knobs: imitación del live.dial nativo con nuestros colores (arrastre vertical)
+  var SANS = '"Ableton Sans Medium", Helvetica, Arial, sans-serif';
   function knob(label, x, y, lo, hi, expo, init, unit, fn) {
     var c = document.createElement('canvas');
-    c.width = 60 * DPR; c.height = 72 * DPR;
+    c.width = 60 * DPR; c.height = 64 * DPR;
+    c.style.height = '64px';
     place(c, x, y);
-    var mg = makeMg(c, 60, 72);
-    var k = load(knobSrc, { jsarguments: ['midirain_knob.js', label, lo, hi, expo, init].concat(unit ? [unit] : []), mg: mg });
-    var pos = Math.pow((init - lo) / (hi - lo), 1 / expo);
-    function set() { var v = lo + (hi - lo) * Math.pow(pos, expo); k.msg_float(v); fn(v); }
+    var g = c.getContext('2d');
+    var pos = Math.pow((init - lo) / (hi - lo), 1 / expo), v = init;
+    function paint() {
+      var cx = 30, cy = 30, r = 13, a0 = 0.75 * Math.PI, a1 = 2.25 * Math.PI;
+      var a = a0 + pos * (a1 - a0), from = lo < 0 ? 1.5 * Math.PI : a0;
+      g.setTransform(DPR, 0, 0, DPR, 0, 0);
+      g.fillStyle = '#000'; g.fillRect(0, 0, 60, 64);
+      g.textAlign = 'center'; g.font = '9px ' + SANS; g.fillStyle = 'rgba(255,255,255,0.85)';
+      g.fillText(label, cx, 10);
+      g.lineWidth = 2.5;
+      g.strokeStyle = 'rgba(255,255,255,0.28)'; g.beginPath(); g.arc(cx, cy, r, a0, a1); g.stroke();
+      g.strokeStyle = '#fff'; g.beginPath(); g.arc(cx, cy, r, Math.min(a, from), Math.max(a, from) + 0.001); g.stroke();
+      g.lineWidth = 1.5; g.beginPath();
+      g.moveTo(cx + Math.cos(a) * 4, cy + Math.sin(a) * 4); g.lineTo(cx + Math.cos(a) * (r - 1), cy + Math.sin(a) * (r - 1)); g.stroke();
+      g.fillText(Math.round(v) + (unit ? ' ' + unit : ''), cx, 58);
+    }
+    function set() { v = lo + (hi - lo) * Math.pow(pos, expo); paint(); fn(v); }
     var y0 = null;
     c.addEventListener('pointerdown', function (e) { y0 = e.clientY; c.setPointerCapture(e.pointerId); });
     c.addEventListener('pointermove', function (e) {
@@ -200,12 +215,12 @@
     });
     c.addEventListener('pointerup', function () { y0 = null; });
     set();
-    knobs.push({ mg: mg, k: k, set: function (p) { pos = p; set(); } });
+    knobs.push({ set: function (p) { pos = p; set(); } });
   }
-  knob('Density', CX, 4, 0, 100, 1, 30, '%', function (v) { engine.density(v); });
-  knob('Fall', CX + 64, 4, 0, 100, 1, 40, '%', function (v) { engine.fall(v); });
-  knob('Wind', CX, 86, -100, 100, 1, 10, '', function (v) { engine.wind(v); });
-  knob('Length', CX + 64, 86, 10, 2000, 3, 150, 'ms', function (v) { engine.dur(v); });
+  knob('Density', CX, 8, 0, 100, 1, 30, '%', function (v) { engine.density(v); });
+  knob('Fall', CX + 64, 8, 0, 100, 1, 40, '%', function (v) { engine.fall(v); });
+  knob('Wind', CX, 88, -100, 100, 1, 10, '', function (v) { engine.wind(v); });
+  knob('Length', CX + 64, 88, 10, 2000, 3, 150, 'ms', function (v) { engine.dur(v); });
 
   function select(label, x, y, w, items, init, fn) {
     lbl(label, x, y - 4);
@@ -237,7 +252,7 @@
   number('Low', MX, 82, 48, function (v) { engine.low(v); });
   number('High', MX + 68, 82, 72, function (v) { engine.high(v); });
   select('Sync', MX, 114, 62, ['Free', '1/32', '1/16', '1/8', '1/4'], 0, function (i) { engine.sync(i); });
-  var credit = place(document.createElement('div'), 590 - 10 - 30, 169 - 17); credit.className = 'credit'; credit.textContent = 'mxnchv';
+  var credit = place(document.createElement('div'), 590 - 10 - 34, 169 - 18); credit.className = 'credit'; credit.textContent = 'mxnchv';
 
   window.midirain = { engine: engine, ui: ui, knobs: knobs, globals: globals };
 
@@ -245,7 +260,6 @@
   (function frame() {
     requestAnimationFrame(frame);
     rainMg.frame(ui.paint);
-    knobs.forEach(function (o) { o.mg.frame(o.k.paint); });
   })();
 })().catch(function (e) { document.getElementById('log').textContent = 'error: ' + e.message; throw e; });
 </script>

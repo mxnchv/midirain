@@ -19,7 +19,7 @@ DEVICE_H = 169
 RAIN_W = 300
 CX = 312                   # x donde empiezan los controles
 
-FONT = "Space Mono"
+FONT = "Ableton Sans Medium"   # la de Live; si no está, Max usa la suya por defecto
 
 # paleta de mxnchv.xyz: negro, blanco con alfa y el gris #1c1c1c de los separadores
 BLACK = [0.0, 0.0, 0.0, 1.0]
@@ -98,11 +98,16 @@ def param(longname, shortname, ptype, **v):
     return {"valueof": valueof}
 
 
-# el live.dial es invisible: lo dibuja midirain_knob.js encima
-CLEAR = [0.0, 0.0, 0.0, 0.0]
-DIAL_COLORS = {k: CLEAR for k in (
-    "activedialcolor", "dialcolor", "activeneedlecolor", "needlecolor",
-    "textcolor", "panelcolor", "tricolor", "focusbordercolor")}
+# knob nativo de Live con nuestros colores: arco y aguja blancos, aro gris
+DIAL_COLORS = {
+    "activedialcolor": WHITE,
+    "dialcolor": white(0.28),
+    "activeneedlecolor": WHITE,
+    "needlecolor": WHITE,
+    "textcolor": white(0.85),
+    "panelcolor": BLACK,
+    "focusbordercolor": white(0.6),
+}
 TAB_COLORS = {
     "bgcolor": BLACK,
     "activebgcolor": BLACK,
@@ -131,27 +136,20 @@ NUMBOX_COLORS = {
 }
 
 
-KNOB_W, KNOB_H = 60, 72
+KNOB_W, KNOB_H = 60, 64
 _knobs = []
 
 
-def dial(key, varname, longname, label, x, y, mmin, mmax, initial, unitstyle, exponent=None, unit=None):
-    """live.dial transparente (ratón, automatización, MIDI map) con un jsui encima
-    que lo dibuja (midirain_knob.js, ignoreclick)."""
+def dial(key, varname, longname, x, y, mmin, mmax, initial, unitstyle, exponent=None):
+    """live.dial nativo: nombre arriba, aro con aguja y valor debajo."""
     v = dict(mmin=float(mmin), mmax=float(mmax), initial=[float(initial)], unitstyle=unitstyle)
     if exponent:
         v["exponent"] = float(exponent)
-    pres = [x, y, KNOB_W, KNOB_H]
     i = len(_knobs)
-    box(key, "live.dial", [20 + i * 64, 30, KNOB_W, KNOB_H], 1, 2, ["", "float"], pres=pres,
-        parameter_enable=1, varname=varname, showname=0, shownumber=0,
+    box(key, "live.dial", [20 + i * 64, 30, KNOB_W, KNOB_H], 1, 2, ["", "float"], pres=[x, y, KNOB_W, KNOB_H],
+        parameter_enable=1, varname=varname, showname=1, shownumber=1,
         saved_attribute_attributes=param(longname, longname, 0, **v), **DIAL_COLORS)
-    args = [label, mmin, mmax, exponent or 1, initial] + ([unit] if unit else [])
-    kkey = "knob_" + key
-    box(kkey, "jsui", [820 + i * 64, 30, KNOB_W, KNOB_H], 1, 0, pres=pres,
-        filename="midirain_knob.js", jsarguments=args, ignoreclick=1, parameter_enable=0, varname=kkey)
     _knobs.append(key)
-    wire(key, kkey)
     return key
 
 
@@ -200,16 +198,16 @@ def label(key, text, x, y):
             pres=[x - 4, y - 11, 60, 14], size=8.0)
 
 
-dial("density", "density", "Density", "Density", CX, 4, 0, 100, 30, 5, unit="%")
+dial("density", "density", "Density", CX, 8, 0, 100, 30, 5)
 CONTROLS.append(("density", "density"))
 
-dial("fall", "fall", "Fall", "Fall", CX + 64, 4, 0, 100, 40, 5, unit="%")
+dial("fall", "fall", "Fall", CX + 64, 8, 0, 100, 40, 5)
 CONTROLS.append(("fall", "fall"))
 
-dial("wind", "wind", "Wind", "Wind", CX, 86, -100, 100, 10, 0)
+dial("wind", "wind", "Wind", CX, 88, -100, 100, 10, 0)
 CONTROLS.append(("wind", "wind"))
 
-dial("dur", "dur", "Length", "Length", CX + 64, 86, 10, 2000, 150, 2, exponent=3, unit="ms")
+dial("dur", "dur", "Length", CX + 64, 88, 10, 2000, 150, 2, exponent=3)
 CONTROLS.append(("dur", "dur"))
 
 label("l_mode", "Mode", MX, 14)
@@ -263,13 +261,6 @@ for ctl, _ in CONTROLS:
 
 obj("tick", "metro 10", [20, 290, 60, 22], 2, 1, ["bang"])
 wire("init", "tick", outlet=0)
-
-# al cargar, cada knob se trae al frente para que tape su live.dial: en Live no
-# podemos fiarnos del orden de las cajas en el archivo
-msg("knobs_front", ", ".join("script bringtofront knob_" + k for k in _knobs), [460, 710, 300, 22])
-obj("thispatcher", "thispatcher", [460, 740, 80, 22], 1, 2, ["", ""])
-wire("init", "knobs_front", outlet=1)
-wire("knobs_front", "thispatcher")
 
 comment("c_sync", "rejilla del transporte (el motor la configura)", [200, 260, 280, 18])
 obj("gridmetro", "metro 16n @quantize 16n", [200, 290, 150, 22], 2, 1, ["bang"])

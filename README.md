@@ -2,16 +2,15 @@
 
 Dispositivo Max for Live (MIDI Effect) para Ableton Live 12. Cae una lluvia de gotas sobre un suelo dividido en columnas invisibles, y cada columna es una nota MIDI. Cuando una gota toca el suelo, suena la nota de su columna, con una salpicadura y un destello.
 
-Estética de [mxnchv.xyz](https://mxnchv.xyz): negro puro, blanco con transparencia, Space Mono y scanlines.
+Estética de [mxnchv.xyz](https://mxnchv.xyz): negro puro, blanco con transparencia y scanlines.
 
-La lluvia ocupa la izquierda (300 px) y los controles la derecha: knobs en 2×2 y menús en columna. Donde una gota cruza "midirain", esa parte de las letras sale en negativo.
+La lluvia ocupa la izquierda (300 px) y los controles la derecha: knobs en 2×2 y menús en columna. Los knobs son los nativos de Live (`live.dial`) con colores en blanco y gris, y los textos usan la fuente de Live.
 
 ## Instalación
 
-1. Copia en **la misma carpeta** `midirain.amxd`, `midirain_engine.js`, `midirain_ui.js` y `midirain_knob.js` (por ejemplo `User Library/Presets/MIDI Effects/Max MIDI Effect/midirain/`).
+1. Copia en **la misma carpeta** `midirain.amxd`, `midirain_engine.js` y `midirain_ui.js` (por ejemplo `User Library/Presets/MIDI Effects/Max MIDI Effect/midirain/`).
 2. Arrastra `midirain.amxd` a una pista MIDI, delante de un instrumento.
 3. Para usarlo en otro ordenador o compartirlo, abre el dispositivo en Max, pulsa **Freeze** y guárdalo. Así los `.js` quedan dentro del `.amxd`.
-4. Opcional: instala la fuente [Space Mono](https://fonts.google.com/specimen/Space+Mono). Si no la tienes, Max usa una fuente por defecto.
 
 ### Si Live no abre el .amxd
 
@@ -43,7 +42,6 @@ Con **Sync** activo, cuantiza tanto con Live en play como en stop. El motor lee 
 ## Arquitectura
 
 - `midirain_engine.js` corre en `[js midirain_engine.js ---mr]`, movido por un `[metro 10]` que arranca `[live.thisdevice]`. Contiene la simulación, las columnas y la salida de notas. `bang`/`tick`, `grid` y `note` llevan `.immediate = 1`.
-- `midirain_knob.js` dibuja cada knob (aro gris abierto por abajo, recorrido en blanco, nombre y valor debajo) en un `[jsui]` con `ignoreclick`, encima de un `live.dial` transparente. El `live.dial` es el parámetro real: recibe el ratón, la automatización y el MIDI map, y le pasa su valor al jsui. Al cargar, `[thispatcher]` trae cada knob al frente (`script bringtofront`) para que tape su dial.
 - `midirain_ui.js` corre en `[jsui]` y solo dibuja. Calcula la posición de cada gota en el instante de pintar, a partir del último paso del motor, para que el movimiento sea continuo. Lee el estado de un `Global` cuyo nombre es único por instancia (`---` se sustituye por un ID) y repinta al recibir `draw <nombreGlobal>`, unos 60 fps. Las notas no dependen nunca del repintado.
 - Salida: motor → `[unpack 0 0 0]` → `[makenote]` → `[pack 0 0]` → `[midiformat]` → `[midiout]`. Al desactivar el dispositivo, `makenote` recibe `stop` y apaga todo lo que suena.
 - Entrada: `[midiin]` → `[midiparse]` → `[prepend note]` → motor. Las notas de entrada no pasan a la salida.

@@ -3,10 +3,8 @@
 // que el motor publica en un Global y repinta cuando recibe "draw <nombreGlobal>".
 // Ninguna nota depende de este archivo. ES5.
 //
-// "midirain" sale en negativo donde lo cruza una gota, como el cursor de la web.
-//
-// Estética de mxnchv.xyz: negro puro, blanco con transparencia, Space Mono,
-// líneas de 1 px y scanlines.
+// Estética de mxnchv.xyz: negro puro, blanco con transparencia, líneas de 1 px
+// y scanlines.
 
 mgraphics.init();
 mgraphics.relative_coords = 0;
@@ -16,7 +14,7 @@ inlets = 1;
 outlets = 0;
 
 var GROUND = 5;          // margen bajo la línea del suelo, para que se vea la salpicadura
-var FONT = "Space Mono";
+var FONT = "Ableton Sans Medium";   // la de Live, como el resto del dispositivo
 var FLASH_LIFE = 400;
 var SPLASH_LIFE = 450;
 var MAX_EXTRAPOLATE = 0.05;  // s
@@ -74,7 +72,6 @@ function paint() {
         drawGround({ cols: [], mode: 0 }, W, RH, t);
     }
 
-    drawLogo(segs);
 
     // scanlines
     mgraphics.set_source_rgba(0, 0, 0, 0.14);
@@ -117,7 +114,7 @@ function dropSegments(S, W, RH, t) {
         b = Math.min(3, Math.floor(s * 4));
         out.push({
             x1: x - dx * L, y1: y - dy * L, x2: x, y2: y,
-            b: b, w: bucketWidth(b)
+            b: b
         });
     }
     return out;
@@ -234,72 +231,4 @@ function drawGround(S, W, RH, t) {
         mgraphics.move_to((W - tw) / 2, RH - 8);
         mgraphics.show_text(msg);
     }
-}
-
-// ---------------------------------------------------------------------------
-// "midirain", en negativo donde lo cruza una gota
-
-function textWidth(str, track) {
-    var w = 0;
-    var i;
-    for (i = 0; i < str.length; i++) w += mgraphics.text_measure(str.charAt(i))[0] + track;
-    return w - track;
-}
-
-// texto con espaciado entre letras, como el logo de la web (letter-spacing 0.2em)
-function spaced(str, x, y, track, asPath) {
-    var i, ch;
-    for (i = 0; i < str.length; i++) {
-        ch = str.charAt(i);
-        mgraphics.move_to(x, y);
-        if (asPath) {
-            mgraphics.text_path(ch);
-        } else {
-            mgraphics.show_text(ch);
-        }
-        x += mgraphics.text_measure(ch)[0] + track;
-    }
-}
-
-// Pinta el texto en blanco y, recortando a la forma de las letras, vuelve a
-// pintar en negro los trozos de gota que las cruzan: el efecto "difference"
-// del cursor de la web. Si mgraphics no tuviera text_path o clip, queda el
-// texto normal.
-function negativeText(str, x, y, track, alpha, segs) {
-    var w = textWidth(str, track);
-    var hit = [];
-    var i, g, b;
-
-    mgraphics.set_source_rgba(1, 1, 1, alpha);
-    spaced(str, x, y, track, false);
-
-    for (i = 0; i < segs.length; i++) {
-        g = segs[i];
-        if (Math.max(g.x1, g.x2) + 2 < x || Math.min(g.x1, g.x2) - 2 > x + w) continue;
-        if (Math.max(g.y1, g.y2) + 2 < y - 10 || Math.min(g.y1, g.y2) - 2 > y + 3) continue;
-        hit.push(g);
-    }
-    if (!hit.length || alpha <= 0) return w;
-
-    try {
-        mgraphics.save();
-        spaced(str, x, y, track, true);
-        mgraphics.clip();
-        mgraphics.set_line_cap("round");
-        mgraphics.set_source_rgba(0, 0, 0, 1);   // negro pleno aunque el texto sea gris
-        for (b = 0; b < 4; b++) {
-            mgraphics.set_line_width(bucketWidth(b));
-            strokeSegs(hit, b);
-        }
-        mgraphics.restore();
-    } catch (e) {
-        mgraphics.restore();
-    }
-    return w;
-}
-
-function drawLogo(segs) {
-    mgraphics.select_font_face(FONT);
-    mgraphics.set_font_size(8);
-    negativeText("midirain", 10, 15, 1.6, 0.9, segs);
 }
