@@ -179,24 +179,25 @@
   var knobs = [];
 
   // mismas posiciones que en tools/build_device.py (layout A)
-  var CX = 312, MX = CX + 140;
+  var CX = 312, MX = 452;
+  var KX = [312, 378], KY = [13, 94], ROWS = [13, 51, 89, 127];   // ROWS: arriba de cada nombre de menú
   function place(el, x, y) { el.style.left = x + 'px'; el.style.top = y + 'px'; panel.appendChild(el); return el; }
-  function lbl(text, x, y) { var d = document.createElement('div'); d.className = 'lbl'; d.textContent = text; place(d, x, y - 9); }
+  function lbl(text, x, y) { var d = document.createElement('div'); d.className = 'lbl'; d.textContent = text; place(d, x, y); }   // y: arriba del texto
 
   // knobs: imitación del live.dial nativo con nuestros colores (arrastre vertical)
   var SANS = '"Ableton Sans Medium", Helvetica, Arial, sans-serif';
   function knob(label, x, y, lo, hi, expo, init, unit, fn) {
     var c = document.createElement('canvas');
-    c.width = 60 * DPR; c.height = 64 * DPR;
-    c.style.height = '64px';
+    c.width = 56 * DPR; c.height = 62 * DPR;
+    c.style.width = '56px'; c.style.height = '62px';
     place(c, x, y);
     var g = c.getContext('2d');
     var pos = Math.pow((init - lo) / (hi - lo), 1 / expo), v = init;
     function paint() {
-      var cx = 30, cy = 30, r = 13, a0 = 0.75 * Math.PI, a1 = 2.25 * Math.PI;
+      var cx = 28, cy = 31, r = 15, a0 = 0.75 * Math.PI, a1 = 2.25 * Math.PI;
       var a = a0 + pos * (a1 - a0), from = lo < 0 ? 1.5 * Math.PI : a0;
       g.setTransform(DPR, 0, 0, DPR, 0, 0);
-      g.fillStyle = '#000'; g.fillRect(0, 0, 60, 64);
+      g.fillStyle = '#000'; g.fillRect(0, 0, 56, 62);
       g.textAlign = 'center'; g.font = '9px ' + SANS; g.fillStyle = 'rgba(255,255,255,0.85)';
       g.fillText(label, cx, 10);
       g.lineWidth = 2.5;
@@ -204,7 +205,7 @@
       g.strokeStyle = '#fff'; g.beginPath(); g.arc(cx, cy, r, Math.min(a, from), Math.max(a, from) + 0.001); g.stroke();
       g.lineWidth = 1.5; g.beginPath();
       g.moveTo(cx + Math.cos(a) * 4, cy + Math.sin(a) * 4); g.lineTo(cx + Math.cos(a) * (r - 1), cy + Math.sin(a) * (r - 1)); g.stroke();
-      g.fillText(Math.round(v) + (unit ? ' ' + unit : ''), cx, 58);
+      g.fillText(Math.round(v) + (unit ? ' ' + unit : ''), cx, 60);
     }
     function set() { v = lo + (hi - lo) * Math.pow(pos, expo); paint(); fn(v); }
     var y0 = null;
@@ -217,13 +218,13 @@
     set();
     knobs.push({ set: function (p) { pos = p; set(); } });
   }
-  knob('Density', CX, 8, 0, 100, 1, 30, '%', function (v) { engine.density(v); });
-  knob('Fall', CX + 64, 8, 0, 100, 1, 40, '%', function (v) { engine.fall(v); });
-  knob('Wind', CX, 88, -100, 100, 1, 10, '', function (v) { engine.wind(v); });
-  knob('Length', CX + 64, 88, 10, 2000, 3, 150, 'ms', function (v) { engine.dur(v); });
+  knob('Density', KX[0], KY[0], 0, 100, 1, 30, '%', function (v) { engine.density(v); });
+  knob('Fall', KX[1], KY[0], 0, 100, 1, 40, '%', function (v) { engine.fall(v); });
+  knob('Wind', KX[0], KY[1], -100, 100, 1, 10, '', function (v) { engine.wind(v); });
+  knob('Length', KX[1], KY[1], 10, 2000, 3, 150, 'ms', function (v) { engine.dur(v); });
 
   function select(label, x, y, w, items, init, fn) {
-    lbl(label, x, y - 4);
+    lbl(label, x, y - 14);
     var s = document.createElement('select');
     s.innerHTML = items.map(function (it, i) { return '<option' + (i === init ? ' selected' : '') + '>' + it; }).join('');
     s.style.width = w + 'px';
@@ -231,14 +232,14 @@
     place(s, x, y); fn(init);
   }
   function number(label, x, y, init, fn) {
-    lbl(label, x, y - 4);
+    lbl(label, x, y - 14);
     var n = document.createElement('input'); n.type = 'number'; n.min = 0; n.max = 127; n.value = init; n.style.width = '62px';
     n.addEventListener('input', function () { fn(+n.value); });
     place(n, x, y); fn(init);
   }
 
-  lbl('Mode', MX, 14);
-  var tabs = place(document.createElement('div'), MX, 18); tabs.className = 'tabs';
+  lbl('Mode', MX, ROWS[0]);
+  var tabs = place(document.createElement('div'), MX, ROWS[0] + 14); tabs.className = 'tabs';
   ['Scale', 'MIDI'].forEach(function (t, i) {
     var b = document.createElement('button'); b.textContent = t; if (!i) b.className = 'on';
     b.addEventListener('click', function () {
@@ -246,12 +247,12 @@
     });
     tabs.appendChild(b);
   });
-  select('Root', MX, 50, 40, NN, 0, function (i) { engine.tonic(i); });
-  select('Scale', MX + 46, 50, 84, ['Major', 'Minor', 'Dorian', 'Phrygian', 'Lydian', 'Mixolydian', 'Harmonic Minor',
+  select('Root', MX, ROWS[1] + 14, 40, NN, 0, function (i) { engine.tonic(i); });
+  select('Scale', MX + 46, ROWS[1] + 14, 84, ['Major', 'Minor', 'Dorian', 'Phrygian', 'Lydian', 'Mixolydian', 'Harmonic Minor',
     'Major Pentatonic', 'Minor Pentatonic', 'Blues', 'Chromatic'], 1, function (i) { engine.scale(i); });
-  number('Low', MX, 82, 48, function (v) { engine.low(v); });
-  number('High', MX + 68, 82, 72, function (v) { engine.high(v); });
-  select('Sync', MX, 114, 62, ['Free', '1/32', '1/16', '1/8', '1/4'], 0, function (i) { engine.sync(i); });
+  number('Low', MX, ROWS[2] + 14, 48, function (v) { engine.low(v); });
+  number('High', MX + 68, ROWS[2] + 14, 72, function (v) { engine.high(v); });
+  select('Sync', MX, ROWS[3] + 14, 62, ['Free', '1/32', '1/16', '1/8', '1/4'], 0, function (i) { engine.sync(i); });
   var credit = place(document.createElement('div'), 590 - 10 - 34, 169 - 18); credit.className = 'credit'; credit.textContent = 'mxnchv';
 
   window.midirain = { engine: engine, ui: ui, knobs: knobs, globals: globals };

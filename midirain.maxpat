@@ -141,8 +141,8 @@
 					"patching_rect": [
 						20.0,
 						30.0,
-						60.0,
-						64.0
+						56.0,
+						62.0
 					],
 					"outlettype": [
 						"",
@@ -151,9 +151,9 @@
 					"presentation": 1,
 					"presentation_rect": [
 						312.0,
-						8.0,
-						60.0,
-						64.0
+						13.0,
+						56.0,
+						62.0
 					],
 					"parameter_enable": 1,
 					"varname": "density",
@@ -163,7 +163,7 @@
 						"valueof": {
 							"parameter_longname": "Density",
 							"parameter_shortname": "Density",
-							"parameter_type": 0,
+							"parameter_type": 1,
 							"parameter_mmin": 0.0,
 							"parameter_mmax": 100.0,
 							"parameter_initial": [
@@ -226,8 +226,8 @@
 					"patching_rect": [
 						84.0,
 						30.0,
-						60.0,
-						64.0
+						56.0,
+						62.0
 					],
 					"outlettype": [
 						"",
@@ -235,10 +235,10 @@
 					],
 					"presentation": 1,
 					"presentation_rect": [
-						376.0,
-						8.0,
-						60.0,
-						64.0
+						378.0,
+						13.0,
+						56.0,
+						62.0
 					],
 					"parameter_enable": 1,
 					"varname": "fall",
@@ -248,7 +248,7 @@
 						"valueof": {
 							"parameter_longname": "Fall",
 							"parameter_shortname": "Fall",
-							"parameter_type": 0,
+							"parameter_type": 1,
 							"parameter_mmin": 0.0,
 							"parameter_mmax": 100.0,
 							"parameter_initial": [
@@ -311,8 +311,8 @@
 					"patching_rect": [
 						148.0,
 						30.0,
-						60.0,
-						64.0
+						56.0,
+						62.0
 					],
 					"outlettype": [
 						"",
@@ -321,9 +321,9 @@
 					"presentation": 1,
 					"presentation_rect": [
 						312.0,
-						88.0,
-						60.0,
-						64.0
+						94.0,
+						56.0,
+						62.0
 					],
 					"parameter_enable": 1,
 					"varname": "wind",
@@ -333,7 +333,7 @@
 						"valueof": {
 							"parameter_longname": "Wind",
 							"parameter_shortname": "Wind",
-							"parameter_type": 0,
+							"parameter_type": 1,
 							"parameter_mmin": -100.0,
 							"parameter_mmax": 100.0,
 							"parameter_initial": [
@@ -396,8 +396,8 @@
 					"patching_rect": [
 						212.0,
 						30.0,
-						60.0,
-						64.0
+						56.0,
+						62.0
 					],
 					"outlettype": [
 						"",
@@ -405,10 +405,10 @@
 					],
 					"presentation": 1,
 					"presentation_rect": [
-						376.0,
-						88.0,
-						60.0,
-						64.0
+						378.0,
+						94.0,
+						56.0,
+						62.0
 					],
 					"parameter_enable": 1,
 					"varname": "dur",
@@ -489,7 +489,7 @@
 					"presentation": 1,
 					"presentation_rect": [
 						448.0,
-						3.0,
+						10.0,
 						60.0,
 						14.0
 					],
@@ -513,7 +513,7 @@
 						260.0,
 						30.0,
 						76.0,
-						14.0
+						15.0
 					],
 					"outlettype": [
 						"",
@@ -523,9 +523,9 @@
 					"presentation": 1,
 					"presentation_rect": [
 						452.0,
-						18.0,
+						27.0,
 						76.0,
-						14.0
+						15.0
 					],
 					"parameter_enable": 1,
 					"varname": "mode",
@@ -613,7 +613,7 @@
 					"presentation": 1,
 					"presentation_rect": [
 						448.0,
-						35.0,
+						48.0,
 						60.0,
 						14.0
 					],
@@ -647,7 +647,7 @@
 					"presentation": 1,
 					"presentation_rect": [
 						452.0,
-						50.0,
+						65.0,
 						40.0,
 						15.0
 					],
@@ -733,7 +733,7 @@
 					"presentation": 1,
 					"presentation_rect": [
 						494.0,
-						35.0,
+						48.0,
 						60.0,
 						14.0
 					],
@@ -767,7 +767,7 @@
 					"presentation": 1,
 					"presentation_rect": [
 						498.0,
-						50.0,
+						65.0,
 						84.0,
 						15.0
 					],
@@ -852,7 +852,7 @@
 					"presentation": 1,
 					"presentation_rect": [
 						448.0,
-						67.0,
+						86.0,
 						60.0,
 						14.0
 					],
@@ -885,7 +885,7 @@
 					"presentation": 1,
 					"presentation_rect": [
 						452.0,
-						82.0,
+						103.0,
 						62.0,
 						15.0
 					],
@@ -959,7 +959,7 @@
 					"presentation": 1,
 					"presentation_rect": [
 						516.0,
-						67.0,
+						86.0,
 						60.0,
 						14.0
 					],
@@ -992,7 +992,7 @@
 					"presentation": 1,
 					"presentation_rect": [
 						520.0,
-						82.0,
+						103.0,
 						62.0,
 						15.0
 					],
@@ -1066,7 +1066,7 @@
 					"presentation": 1,
 					"presentation_rect": [
 						448.0,
-						99.0,
+						124.0,
 						60.0,
 						14.0
 					],
@@ -1100,7 +1100,7 @@
 					"presentation": 1,
 					"presentation_rect": [
 						452.0,
-						114.0,
+						141.0,
 						62.0,
 						15.0
 					],

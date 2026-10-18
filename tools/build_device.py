@@ -136,19 +136,20 @@ NUMBOX_COLORS = {
 }
 
 
-KNOB_W, KNOB_H = 60, 64
+KNOB_W, KNOB_H = 56, 62     # ajustada a lo que pinta el live.dial: nombre, aro y valor
 _knobs = []
 
 
-def dial(key, varname, longname, x, y, mmin, mmax, initial, unitstyle, exponent=None):
-    """live.dial nativo: nombre arriba, aro con aguja y valor debajo."""
+def dial(key, varname, longname, x, y, mmin, mmax, initial, unitstyle, exponent=None, ptype=0):
+    """live.dial nativo: nombre arriba, aro con aguja y valor debajo.
+    ptype 1 (entero) para que los porcentajes salgan sin decimal."""
     v = dict(mmin=float(mmin), mmax=float(mmax), initial=[float(initial)], unitstyle=unitstyle)
     if exponent:
         v["exponent"] = float(exponent)
     i = len(_knobs)
     box(key, "live.dial", [20 + i * 64, 30, KNOB_W, KNOB_H], 1, 2, ["", "float"], pres=[x, y, KNOB_W, KNOB_H],
         parameter_enable=1, varname=varname, showname=1, shownumber=1,
-        saved_attribute_attributes=param(longname, longname, 0, **v), **DIAL_COLORS)
+        saved_attribute_attributes=param(longname, longname, ptype, **v), **DIAL_COLORS)
     _knobs.append(key)
     return key
 
@@ -189,55 +190,71 @@ box("ui", "jsui", [460, 480, RAIN_W, DEVICE_H], 1, 0, pres=[0, 0, RAIN_W, DEVICE
 # controles: knobs en 2x2 y menús en columna
 
 CONTROLS = []              # (clave del control, selector del motor)
-MX = CX + 140              # columna de menús
+# Rejilla vertical común: las dos filas de knobs y las cuatro de menús ocupan el
+# mismo alto (de TOP a BOTTOM), así ambas columnas quedan centradas y alineadas.
+TOP, BOTTOM = 13, 156
+ROW = (BOTTOM - TOP - 15 - 14) / 3.0       # paso entre filas de menús (nombre + caja)
+KX = [CX, CX + KNOB_W + 10]                # columnas de knobs
+KY = [TOP, BOTTOM - KNOB_H]                # filas de knobs
+MX = KX[1] + KNOB_W + 18                   # columna de menús
+
+
+def mrow(i):
+    """y del nombre (arriba del texto) y de la caja de la fila de menús i."""
+    y = round(TOP + i * ROW)
+    return y, y + 14
 
 
 def label(key, text, x, y):
-    """Nombre encima de un menú; y es la línea base del texto."""
+    """Nombre encima de un menú; y es la parte de arriba del texto."""
     comment(key, text, [700.0 + 70 * (len(CONTROLS) % 4), 120.0 + 24 * (len(CONTROLS) // 4), 60, 18],
-            pres=[x - 4, y - 11, 60, 14], size=8.0)
+            pres=[x - 4, y - 3, 60, 14], size=8.0)
 
 
-dial("density", "density", "Density", CX, 8, 0, 100, 30, 5)
+dial("density", "density", "Density", KX[0], KY[0], 0, 100, 30, 5, ptype=1)
 CONTROLS.append(("density", "density"))
 
-dial("fall", "fall", "Fall", CX + 64, 8, 0, 100, 40, 5)
+dial("fall", "fall", "Fall", KX[1], KY[0], 0, 100, 40, 5, ptype=1)
 CONTROLS.append(("fall", "fall"))
 
-dial("wind", "wind", "Wind", CX, 88, -100, 100, 10, 0)
+dial("wind", "wind", "Wind", KX[0], KY[1], -100, 100, 10, 0, ptype=1)
 CONTROLS.append(("wind", "wind"))
 
-dial("dur", "dur", "Length", CX + 64, 88, 10, 2000, 150, 2, exponent=3)
+dial("dur", "dur", "Length", KX[1], KY[1], 10, 2000, 150, 2, exponent=3)
 CONTROLS.append(("dur", "dur"))
 
-label("l_mode", "Mode", MX, 14)
-tab("mode", "mode", "Mode", ["Scale", "MIDI"], 0, [260, 30, 76, 14], [MX, 18, 76, 14])
+ly, by = mrow(0)
+label("l_mode", "Mode", MX, ly)
+tab("mode", "mode", "Mode", ["Scale", "MIDI"], 0, [260, 30, 76, 15], [MX, by, 76, 15])
 CONTROLS.append(("mode", "mode"))
 
-label("l_tonic", "Root", MX, 46)
+ly, by = mrow(1)
+label("l_tonic", "Root", MX, ly)
 menu("tonic", "tonic", "Root",
      ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"], 0,
-     [420, 30, 40, 15], [MX, 50, 40, 15])
+     [420, 30, 40, 15], [MX, by, 40, 15])
 CONTROLS.append(("tonic", "tonic"))
 
-label("l_scale", "Scale", MX + 46, 46)
+label("l_scale", "Scale", MX + 46, ly)
 menu("scale", "scale", "Scale",
      ["Major", "Minor", "Dorian", "Phrygian", "Lydian", "Mixolydian", "Harmonic Minor",
       "Major Pentatonic", "Minor Pentatonic", "Blues", "Chromatic"], 1,
-     [480, 30, 84, 15], [MX + 46, 50, 84, 15])
+     [480, 30, 84, 15], [MX + 46, by, 84, 15])
 CONTROLS.append(("scale", "scale"))
 
-label("l_low", "Low", MX, 78)
-numbox("low", "low", "Low", 48, [620, 30, 62, 15], [MX, 82, 62, 15])
+ly, by = mrow(2)
+label("l_low", "Low", MX, ly)
+numbox("low", "low", "Low", 48, [620, 30, 62, 15], [MX, by, 62, 15])
 CONTROLS.append(("low", "low"))
 
-label("l_high", "High", MX + 68, 78)
-numbox("high", "high", "High", 72, [680, 30, 62, 15], [MX + 68, 82, 62, 15])
+label("l_high", "High", MX + 68, ly)
+numbox("high", "high", "High", 72, [680, 30, 62, 15], [MX + 68, by, 62, 15])
 CONTROLS.append(("high", "high"))
 
-label("l_sync", "Sync", MX, 110)
+ly, by = mrow(3)
+label("l_sync", "Sync", MX, ly)
 menu("sync", "sync", "Sync", ["Free", "1/32", "1/16", "1/8", "1/4"], 0,
-     [340, 30, 62, 15], [MX, 114, 62, 15])
+     [340, 30, 62, 15], [MX, by, 62, 15])
 CONTROLS.append(("sync", "sync"))
 
 comment("credit", "mxnchv", [760, 100, 60, 18], pres=[DEVICE_W - 52, DEVICE_H - 20, 48, 14],
