@@ -169,6 +169,7 @@ test("sync: los impactos se encolan y suenan en el pulso de la rejilla", functio
     var e = load();
     var c = e.ctx;
     c.density(0);
+    c.playing(1);
     c.sync(2);
     var ctl = outOf(e.out, 2).slice(-3);
     assert.deepStrictEqual(ctl, [["interval", "16n"], ["quantize", "16n"], [1]]);
@@ -241,22 +242,28 @@ test("sync: al activarlo con el transporte en marcha, espera el primer pulso", f
     assert.strictEqual(notesOf(e.out).length, 1);
 });
 
-test("sync: con el transporte parado suena en el mismo tick, y al parar se vacía la cola", function () {
+test("sync con Live parado: rejilla propia en ms al tempo, y sigue cuantizando", function () {
     var e = load();
     var c = e.ctx;
     c.density(0);
+    c.tempo(120);
     c.playing(1);
-    c.sync(2);
+    c.sync(2);                                  // 1/16 a 120 bpm = 125 ms
+    c.playing(0);
+    assert.deepStrictEqual(outOf(e.out, 2).slice(-3), [["quantize", 0], ["interval", 125], [1]],
+        "parado: metro en ms, que corre sin transporte");
     c.grid();
     e.advance(10); c.bang();
     e.state().drops = [{ x: 0.5, y: 0.999, vy: 1, s: 0.5 }];
-    e.advance(10); c.bang();
-    assert.strictEqual(notesOf(e.out).length, 0, "encolada");
-    c.playing(0);
-    assert.strictEqual(notesOf(e.out).length, 1, "al parar suena la cola");
-    e.state().drops = [{ x: 0.1, y: 0.999, vy: 1, s: 0.5 }];
-    e.advance(10); c.bang();
-    assert.strictEqual(notesOf(e.out).length, 2, "parado: inmediato");
+    for (var i = 0; i < 10; i++) { e.advance(10); c.bang(); }
+    assert.strictEqual(notesOf(e.out).length, 0, "parado también espera al pulso");
+    c.grid();
+    assert.strictEqual(notesOf(e.out).length, 1);
+
+    c.tempo(60);                                // la rejilla en ms sigue al tempo
+    assert.deepStrictEqual(outOf(e.out, 2).slice(-3), [["quantize", 0], ["interval", 250], [1]]);
+    c.playing(1);                               // en play vuelve a la rejilla del transporte
+    assert.deepStrictEqual(outOf(e.out, 2).slice(-3), [["interval", "16n"], ["quantize", "16n"], [1]]);
 });
 
 test("volver a Libre para el metro y vacía la cola", function () {

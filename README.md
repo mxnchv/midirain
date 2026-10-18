@@ -38,16 +38,16 @@ El `.amxd` se genera escribiendo a mano su contenedor binario, y ese formato no 
 
 Las gotas grandes son más gruesas y rápidas, y suenan más fuerte (velocity 30–127).
 
-Con **Sync** activo, el motor lee de Live el estado del transporte y el tempo (`live.observer`). Con el transporte parado, las notas suenan al momento. Como red de seguridad, si pasan más de 400 ms sin pulsos (o 1,5 veces el intervalo de la rejilla, si es mayor), las notas encoladas también suenan.
+Con **Sync** activo, cuantiza tanto con Live en play como en stop. El motor lee de Live el estado del transporte y el tempo (`live.observer`): en play, la rejilla es la del transporte, alineada al compás; parado, es una rejilla propia al tempo del proyecto (sin compás al que alinearse). Como red de seguridad, si pasan más de 400 ms sin pulsos (o 1,5 veces el intervalo de la rejilla, si es mayor), las notas encoladas suenan igualmente.
 
 ## Arquitectura
 
 - `midirain_engine.js` corre en `[js midirain_engine.js ---mr]`, movido por un `[metro 10]` que arranca `[live.thisdevice]`. Contiene la simulación, las columnas y la salida de notas. `bang`/`tick`, `grid` y `note` llevan `.immediate = 1`.
-- `midirain_knob.js` dibuja cada knob (aro gris abierto por abajo, recorrido en blanco, nombre y valor debajo) en un `[jsui]` con `ignoreclick`, encima de un `live.dial` transparente. El `live.dial` es el parámetro real: recibe el ratón, la automatización y el MIDI map, y le pasa su valor al jsui.
+- `midirain_knob.js` dibuja cada knob (aro gris abierto por abajo, recorrido en blanco, nombre y valor debajo) en un `[jsui]` con `ignoreclick`, encima de un `live.dial` transparente. El `live.dial` es el parámetro real: recibe el ratón, la automatización y el MIDI map, y le pasa su valor al jsui. Al cargar, `[thispatcher]` trae cada knob al frente (`script bringtofront`) para que tape su dial.
 - `midirain_ui.js` corre en `[jsui]` y solo dibuja. Calcula la posición de cada gota en el instante de pintar, a partir del último paso del motor, para que el movimiento sea continuo. Lee el estado de un `Global` cuyo nombre es único por instancia (`---` se sustituye por un ID) y repinta al recibir `draw <nombreGlobal>`, unos 60 fps. Las notas no dependen nunca del repintado.
 - Salida: motor → `[unpack 0 0 0]` → `[makenote]` → `[pack 0 0]` → `[midiformat]` → `[midiout]`. Al desactivar el dispositivo, `makenote` recibe `stop` y apaga todo lo que suena.
 - Entrada: `[midiin]` → `[midiparse]` → `[prepend note]` → motor. Las notas de entrada no pasan a la salida.
-- Sync: el motor configura un `[metro 16n @quantize 16n]` tempo-relativo (`interval`, `quantize`, `1`/`0`) que le devuelve `grid` en cada pulso.
+- Sync: el motor configura un `[metro 16n @quantize 16n]` (`interval`, `quantize`, `1`/`0`) que le devuelve `grid` en cada pulso: en valores de nota con el transporte en marcha, en ms (y sin `quantize`) con el transporte parado.
 - Transporte: `[live.path]` → `[live.observer @property is_playing]` y `[live.observer @property tempo]` → motor (`playing`, `tempo`).
 
 ## Desarrollo

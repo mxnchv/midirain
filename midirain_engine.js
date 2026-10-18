@@ -13,7 +13,9 @@
 // Salida:
 //   outlet 0          pitch velocity duración  ->  [unpack 0 0 0] -> [makenote]
 //   outlet 1          draw <nombreGlobal>      ->  [jsui midirain_ui.js]
-//   outlet 2          control del metro de sync (interval / quantize / 1 / 0)
+//   outlet 2          control del metro de sync (interval / quantize / 1 / 0):
+//                     con Live en play, rejilla del transporte (16n…, alineada al compás);
+//                     con Live parado, la misma rejilla en ms al tempo del proyecto
 
 autowatch = 0;
 inlets = 1;
@@ -307,8 +309,8 @@ function tick() {
 
     step(dt, t);
 
-    // transporte parado (o pulsos que no llegan): suena inmediatamente
-    if (P.sync !== 0 && queue.length && (transportOn === 0 || t - lastGrid > fallbackWindow())) {
+    // red de seguridad: si los pulsos dejan de llegar, suena inmediatamente
+    if (P.sync !== 0 && queue.length && t - lastGrid > fallbackWindow()) {
         flush();
     }
 
@@ -327,16 +329,33 @@ grid.immediate = 1;
 
 function playing(v) {
     transportOn = Number(v) ? 1 : 0;
-    if (transportOn) {
-        lastGrid = now();   // espera el primer pulso, como mucho una ventana
-    } else {
-        flush();
-    }
+    lastGrid = now();       // espera el primer pulso de la rejilla nueva, como mucho una ventana
+    applyGrid();
 }
 playing.immediate = 1;
 
 function tempo(v) {
-    if (Number(v) > 0) bpm = Number(v);
+    if (!(Number(v) > 0)) return;
+    bpm = Number(v);
+    if (P.sync !== 0 && transportOn !== 1) applyGrid();     // la rejilla en ms sigue al tempo
+}
+
+// Configura el metro de la rejilla. Con el transporte en marcha usa valores de
+// nota (solo corre en play y va alineado al compás); parado, el mismo intervalo
+// en ms, que corre siempre: así se cuantiza también con Live en stop.
+function applyGrid() {
+    if (P.sync === 0) {
+        outlet(2, 0);
+        return;
+    }
+    if (transportOn === 1) {
+        outlet(2, "interval", SYNC_VALUES[P.sync]);
+        outlet(2, "quantize", SYNC_VALUES[P.sync]);
+    } else {
+        outlet(2, "quantize", 0);
+        outlet(2, "interval", gridInterval());
+    }
+    outlet(2, 1);
 }
 
 function note(p, v) {
@@ -386,14 +405,8 @@ function sync(v) {
     P.sync = i;
     S.syncLabel = SYNC_LABELS[i];
     lastGrid = now();
-    if (i === 0) {
-        outlet(2, 0);
-        flush();
-    } else {
-        outlet(2, "interval", SYNC_VALUES[i]);
-        outlet(2, "quantize", SYNC_VALUES[i]);
-        outlet(2, 1);
-    }
+    applyGrid();
+    if (i === 0) flush();
 }
 
 function notifydeleted() {

@@ -149,7 +149,7 @@ def dial(key, varname, longname, label, x, y, mmin, mmax, initial, unitstyle, ex
     args = [label, mmin, mmax, exponent or 1, initial] + ([unit] if unit else [])
     kkey = "knob_" + key
     box(kkey, "jsui", [820 + i * 64, 30, KNOB_W, KNOB_H], 1, 0, pres=pres,
-        filename="midirain_knob.js", jsarguments=args, ignoreclick=1, parameter_enable=0)
+        filename="midirain_knob.js", jsarguments=args, ignoreclick=1, parameter_enable=0, varname=kkey)
     _knobs.append(key)
     wire(key, kkey)
     return key
@@ -263,6 +263,13 @@ for ctl, _ in CONTROLS:
 
 obj("tick", "metro 10", [20, 290, 60, 22], 2, 1, ["bang"])
 wire("init", "tick", outlet=0)
+
+# al cargar, cada knob se trae al frente para que tape su live.dial: en Live no
+# podemos fiarnos del orden de las cajas en el archivo
+msg("knobs_front", ", ".join("script bringtofront knob_" + k for k in _knobs), [460, 710, 300, 22])
+obj("thispatcher", "thispatcher", [460, 740, 80, 22], 1, 2, ["", ""])
+wire("init", "knobs_front", outlet=1)
+wire("knobs_front", "thispatcher")
 
 comment("c_sync", "rejilla del transporte (el motor la configura)", [200, 260, 280, 18])
 obj("gridmetro", "metro 16n @quantize 16n", [200, 290, 150, 22], 2, 1, ["bang"])
