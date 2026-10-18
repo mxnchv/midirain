@@ -14,7 +14,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-DEVICE_W = 590
+DEVICE_W = 610
 DEVICE_H = 169
 RAIN_W = 300
 CX = 312                   # x donde empiezan los controles
@@ -148,7 +148,9 @@ DIAL_BOX = 40              # caja del live.dial
 DIAL_Y = 13                # caja del dial, desde la parte de arriba del nombre
 VALUE_Y = 39               # texto del valor, desde la parte de arriba del nombre
 KNOB_H = 50                # alto visible del bloque nombre + aro + valor
-KNOB_FONT = "Ableton Sans Bold"
+LABEL_ALPHA = 0.55         # un solo estilo de etiqueta: nombres en gris…
+VALUE_ALPHA = 0.92         # …y valores en blanco
+DIM = 0.3                  # atenuado de lo que no aplica en modo Held
 _knobs = []
 
 
@@ -160,13 +162,13 @@ def dial(key, varname, longname, cx, top, mmin, mmax, initial, unitstyle, value,
         v["exponent"] = float(exponent)
     i = len(_knobs)
     comment("n_" + key, longname, [20 + i * 64, 10, 60, 18], pres=[cx - 30, top - 3, 60, 14],
-            size=9.0, alpha=0.9, fontname=KNOB_FONT, textjustification=1, ignoreclick=1)
+            size=9.0, alpha=LABEL_ALPHA, textjustification=1, ignoreclick=1)
     box(key, "live.dial", [20 + i * 64, 30, DIAL_BOX, DIAL_BOX], 1, 2, ["", "float"],
         pres=[cx - DIAL_BOX / 2, top + DIAL_Y, DIAL_BOX, DIAL_BOX],
         parameter_enable=1, varname=varname, showname=0, shownumber=0,
         saved_attribute_attributes=param(longname, longname, ptype, **v), **DIAL_COLORS)
     comment("v_" + key, value, [20 + i * 64, 74, 60, 18], pres=[cx - 30, top + VALUE_Y, 60, 14],
-            size=9.0, alpha=0.9, fontname=KNOB_FONT, textjustification=1, ignoreclick=1)
+            size=9.0, alpha=VALUE_ALPHA, textjustification=1, ignoreclick=1)
     _knobs.append(key)
     return key
 
@@ -204,80 +206,72 @@ box("ui", "jsui", [460, 480, RAIN_W, DEVICE_H], 1, 0, pres=[0, 0, RAIN_W, DEVICE
     filename="midirain_ui.js", parameter_enable=0)
 
 # ---------------------------------------------------------------------------
-# controles: knobs en 2x2 y menús en columna
+# controles en dos grupos, separados por una línea:
+#   lluvia (Density, Fall arriba; Wind centrado debajo)
+#   notas: arriba lo que siempre aplica (Length, Mode, Sync);
+#          abajo lo que solo aplica en modo Scale (Root, Scale, Low, High),
+#          que se atenúa entero en modo Held
 
 CONTROLS = []              # (clave del control, selector del motor)
-# Rejilla vertical común: las dos filas de knobs y las cuatro de menús ocupan el
-# mismo alto (de TOP a BOTTOM), así ambas columnas quedan centradas y alineadas.
-TOP, BOTTOM = 13, 156
-ROW = (BOTTOM - TOP - 15 - 14) / 3.0       # paso entre filas de menús (nombre + caja)
-KX = [CX + 30, CX + 96]                    # centros de las columnas de knobs
-KNOB_ROW_GAP = 12
-KY = [round(TOP + (BOTTOM - TOP - (2 * KNOB_H + KNOB_ROW_GAP)) / 2.0)]   # bloque centrado con los menús
-KY.append(KY[0] + KNOB_H + KNOB_ROW_GAP)
-MX = CX + 140                              # columna de menús
-
-
-def mrow(i):
-    """y del nombre (arriba del texto) y de la caja de la fila de menús i."""
-    y = round(TOP + i * ROW)
-    return y, y + 14
+NX = 460                   # x del grupo de notas
+SCALE_ONLY = ["tonic", "scale", "low", "high"]
 
 
 def label(key, text, x, y):
     """Nombre encima de un menú; y es la parte de arriba del texto."""
     comment(key, text, [700.0 + 70 * (len(CONTROLS) % 4), 120.0 + 24 * (len(CONTROLS) // 4), 60, 18],
-            pres=[x - 4, y - 3, 60, 14], size=8.0)
+            pres=[x - 4, y - 3, 60, 14], size=9.0, alpha=LABEL_ALPHA, ignoreclick=1)
 
 
-dial("density", "density", "Density", KX[0], KY[0], 0, 100, 30, 5, "30 %", ptype=1)
+# lluvia
+dial("density", "density", "Density", 342, 16, 0, 100, 30, 5, "30 %", ptype=1)
 CONTROLS.append(("density", "density"))
-
-dial("fall", "fall", "Fall", KX[1], KY[0], 0, 100, 40, 5, "40 %", ptype=1)
+dial("fall", "fall", "Fall", 408, 16, 0, 100, 40, 5, "40 %", ptype=1)
 CONTROLS.append(("fall", "fall"))
-
-dial("wind", "wind", "Wind", KX[0], KY[1], -100, 100, 10, 0, "10", ptype=1)
+dial("wind", "wind", "Wind", 375, 98, -100, 100, 10, 0, "10", ptype=1)
 CONTROLS.append(("wind", "wind"))
 
-dial("dur", "dur", "Length", KX[1], KY[1], 10, 2000, 150, 2, "150 ms", exponent=3)
+box("groupsep", "panel", [790, 10, 10, 30], 1, 0, pres=[448, 14, 1, 142],
+    background=1, bgcolor=white(0.12), border=0, rounded=0, ignoreclick=1)
+
+# notas: siempre
+dial("dur", "dur", "Length", NX + 28, 12, 10, 2000, 150, 2, "150 ms", exponent=3)
 CONTROLS.append(("dur", "dur"))
 
-ly, by = mrow(0)
-label("l_mode", "Mode", MX, ly)
-tab("mode", "mode", "Mode", ["Scale", "MIDI"], 0, [260, 30, 76, 15], [MX, by, 76, 15])
+label("l_mode", "Mode", NX + 66, 12)
+tab("mode", "mode", "Mode", ["Scale", "Held"], 0, [260, 30, 68, 15], [NX + 66, 26, 68, 15])
 CONTROLS.append(("mode", "mode"))
 
-ly, by = mrow(1)
-label("l_tonic", "Root", MX, ly)
+label("l_sync", "Sync", NX + 66, 44)
+menu("sync", "sync", "Sync", ["Free", "1/32", "1/16", "1/8", "1/4"], 0,
+     [340, 30, 68, 15], [NX + 66, 58, 68, 15])
+CONTROLS.append(("sync", "sync"))
+
+# notas: solo en modo Scale
+label("l_tonic", "Root", NX, 88)
 menu("tonic", "tonic", "Root",
      ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"], 0,
-     [420, 30, 40, 15], [MX, by, 40, 15])
+     [420, 30, 40, 15], [NX, 102, 40, 15])
 CONTROLS.append(("tonic", "tonic"))
 
-label("l_scale", "Scale", MX + 46, ly)
+label("l_scale", "Scale", NX + 46, 88)
 menu("scale", "scale", "Scale",
      ["Major", "Minor", "Dorian", "Phrygian", "Lydian", "Mixolydian", "Harmonic Minor",
       "Major Pentatonic", "Minor Pentatonic", "Blues", "Chromatic"], 1,
-     [480, 30, 84, 15], [MX + 46, by, 84, 15])
+     [480, 30, 88, 15], [NX + 46, 102, 88, 15])
 CONTROLS.append(("scale", "scale"))
 
-ly, by = mrow(2)
-label("l_low", "Low", MX, ly)
-numbox("low", "low", "Low", 48, [620, 30, 62, 15], [MX, by, 62, 15])
+label("l_low", "Low", NX, 124)
+numbox("low", "low", "Low", 48, [620, 30, 64, 15], [NX, 138, 64, 15])
 CONTROLS.append(("low", "low"))
 
-label("l_high", "High", MX + 68, ly)
-numbox("high", "high", "High", 72, [680, 30, 62, 15], [MX + 68, by, 62, 15])
+label("l_high", "High", NX + 70, 124)
+numbox("high", "high", "High", 72, [680, 30, 64, 15], [NX + 70, 138, 64, 15])
 CONTROLS.append(("high", "high"))
 
-ly, by = mrow(3)
-label("l_sync", "Sync", MX, ly)
-menu("sync", "sync", "Sync", ["Free", "1/32", "1/16", "1/8", "1/4"], 0,
-     [340, 30, 62, 15], [MX, by, 62, 15])
-CONTROLS.append(("sync", "sync"))
-
-comment("credit", "mxnchv", [760, 100, 60, 18], pres=[DEVICE_W - 52, DEVICE_H - 20, 48, 14],
-        size=8.0, alpha=0.35, textjustification=2)
+# firma: bajo el grupo de lluvia, que es donde queda hueco
+comment("credit", "mxnchv", [760, 100, 60, 18], pres=[394, 151, 48, 14],
+        size=8.0, alpha=0.3, textjustification=2, ignoreclick=1)
 
 # ---------------------------------------------------------------------------
 # lógica
@@ -297,6 +291,25 @@ for ctl, _ in CONTROLS:
 
 obj("tick", "metro 10", [20, 290, 60, 22], 2, 1, ["bang"])
 wire("init", "tick", outlet=0)
+
+# modo Held: Root, Scale, Low y High no hacen nada, así que se atenúan (y sus nombres)
+comment("c_dim", "Mode: atenúa los controles de escala en Held", [820, 230, 260, 18])
+obj("sel_mode", "sel 0 1", [820, 250, 60, 22], 3, 3, ["bang", "bang", ""])
+msg("ctl_on", "active 1, textcolor 1. 1. 1. 0.85", [820, 280, 200, 22])
+msg("ctl_dim", "active 0, textcolor 1. 1. 1. %.2f" % (0.85 * DIM), [820, 310, 200, 22])
+msg("lbl_on", "textcolor 1. 1. 1. %.2f" % LABEL_ALPHA, [1030, 280, 140, 22])
+msg("lbl_dim", "textcolor 1. 1. 1. %.2f" % (LABEL_ALPHA * DIM), [1030, 310, 140, 22])
+wire("mode", "sel_mode")
+wire("sel_mode", "ctl_on", outlet=0)
+wire("sel_mode", "lbl_on", outlet=0)
+wire("sel_mode", "ctl_dim", outlet=1)
+wire("sel_mode", "lbl_dim", outlet=1)
+for k in SCALE_ONLY:
+    wire("ctl_on", k)
+    wire("ctl_dim", k)
+for k in ["l_tonic", "l_scale", "l_low", "l_high"]:
+    wire("lbl_on", k)
+    wire("lbl_dim", k)
 
 comment("c_sync", "rejilla del transporte (el motor la configura)", [200, 260, 280, 18])
 obj("gridmetro", "metro 16n @quantize 16n", [200, 290, 150, 22], 2, 1, ["bang"])

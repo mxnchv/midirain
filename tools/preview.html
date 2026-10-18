@@ -14,18 +14,20 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #111; color: #fff; font-family: 'Space Mono', 'Courier New', monospace;
          min-height: 100vh; display: grid; place-items: center; padding: 16px; }
-  .device { position: relative; width: 590px; height: 169px; outline: 1px solid #1c1c1c; background: #000; }
+  .device { position: relative; width: 610px; height: 169px; outline: 1px solid #1c1c1c; background: #000; }
   #c { display: block; width: 300px; height: 169px; }
   .sep { position: absolute; left: 302px; top: 0; width: 1px; height: 169px; background: #1c1c1c; }
   #panel > * { position: absolute; }
   #panel canvas { width: 60px; height: 72px; cursor: ns-resize; touch-action: none; }
   #panel { font-family: "Ableton Sans Medium", Helvetica, Arial, sans-serif; }
-  #panel .lbl { font-size: 9px; color: rgba(255,255,255,0.5); }
-  #panel .credit { font-size: 9px; color: rgba(255,255,255,0.35); }
+  #panel .lbl { font-size: 9px; color: rgba(255,255,255,0.55); }
+  #panel .credit { font-size: 8px; color: rgba(255,255,255,0.3); }
+  #panel .groupsep { left: 448px; top: 14px; width: 1px; height: 142px; background: rgba(255,255,255,0.12); }
+  #panel .dim { opacity: 0.3; }
   select, input[type=number] { background: #000; color: #fff; border: 1px solid rgba(255,255,255,0.3);
          font: inherit; font-size: 8px; height: 15px; padding: 0 3px; border-radius: 0; }
   .tabs { display: flex; }
-  .tabs button { width: 38px; height: 14px; font: inherit; font-size: 8px; background: #000;
+  .tabs button { width: 34px; height: 14px; font: inherit; font-size: 8px; background: #000;
          color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.3); }
   .tabs button.on { background: #fff; color: #000; }
   .log { position: fixed; bottom: 12px; left: 16px; right: 16px; font-size: 10px;
@@ -180,9 +182,10 @@
 
   // mismas posiciones que en tools/build_device.py (layout A)
   var CX = 312, MX = 452;
-  var KX = [342, 408], KY = [28, 90], ROWS = [13, 51, 89, 127];   // KX: centro de cada knob; KY: arriba del nombre   // ROWS: arriba de cada nombre de menú
+  // mismas posiciones que en tools/build_device.py (opción 3: lluvia | notas)
+  var NX = 460;   // KX: centro de cada knob; KY: arriba del nombre   // ROWS: arriba de cada nombre de menú
   function place(el, x, y) { el.style.left = x + 'px'; el.style.top = y + 'px'; panel.appendChild(el); return el; }
-  function lbl(text, x, y) { var d = document.createElement('div'); d.className = 'lbl'; d.textContent = text; place(d, x, y); }   // y: arriba del texto
+  function lbl(text, x, y) { var d = document.createElement('div'); d.className = 'lbl'; d.textContent = text; return place(d, x, y); }   // y: arriba del texto
 
   // knobs: imitación del live.dial nativo con nuestros colores (arrastre vertical)
   var SANS = '"Ableton Sans Medium", Helvetica, Arial, sans-serif';
@@ -199,7 +202,7 @@
       var a = a0 + pos * (a1 - a0), from = lo < 0 ? 1.5 * Math.PI : a0;
       g.setTransform(DPR, 0, 0, DPR, 0, 0);
       g.fillStyle = '#000'; g.fillRect(0, 0, 60, 54);
-      g.textAlign = 'center'; g.font = 'bold 9px ' + SANS; g.fillStyle = 'rgba(255,255,255,0.9)';
+      g.textAlign = 'center'; g.font = '9px ' + SANS; g.fillStyle = 'rgba(255,255,255,0.55)';
       g.fillText(label, cx, 7);
       g.lineWidth = 2.5;
       g.strokeStyle = 'rgba(255,255,255,0.28)'; g.beginPath(); g.arc(cx, cy, r, a0, a1); g.stroke();
@@ -207,6 +210,7 @@
       g.lineWidth = 1.5; g.beginPath();
       g.moveTo(cx + Math.cos(a) * 4, cy + Math.sin(a) * 4); g.lineTo(cx + Math.cos(a) * (r - 1), cy + Math.sin(a) * (r - 1)); g.stroke();
       var txt = unit === 'ms' && v >= 1000 ? (v / 1000).toFixed(2) + ' s' : Math.round(v) + (unit ? ' ' + unit : '');
+      g.fillStyle = 'rgba(255,255,255,0.92)';
       g.fillText(txt, cx, 49);
     }
     function set() { v = lo + (hi - lo) * Math.pow(pos, expo); paint(); fn(v); }
@@ -220,42 +224,54 @@
     set();
     knobs.push({ set: function (p) { pos = p; set(); } });
   }
-  knob('Density', KX[0], KY[0], 0, 100, 1, 30, '%', function (v) { engine.density(v); });
-  knob('Fall', KX[1], KY[0], 0, 100, 1, 40, '%', function (v) { engine.fall(v); });
-  knob('Wind', KX[0], KY[1], -100, 100, 1, 10, '', function (v) { engine.wind(v); });
-  knob('Length', KX[1], KY[1], 10, 2000, 3, 150, 'ms', function (v) { engine.dur(v); });
+  knob('Density', 342, 16, 0, 100, 1, 30, '%', function (v) { engine.density(v); });
+  knob('Fall', 408, 16, 0, 100, 1, 40, '%', function (v) { engine.fall(v); });
+  knob('Wind', 375, 98, -100, 100, 1, 10, '', function (v) { engine.wind(v); });
+  place(document.createElement('div'), 448, 14).className = 'groupsep';
+  knob('Length', NX + 28, 12, 10, 2000, 3, 150, 'ms', function (v) { engine.dur(v); });
 
   function select(label, x, y, w, items, init, fn) {
-    lbl(label, x, y - 14);
+    var l = lbl(label, x, y - 14);
     var s = document.createElement('select');
+    s.lbl = l;
     s.innerHTML = items.map(function (it, i) { return '<option' + (i === init ? ' selected' : '') + '>' + it; }).join('');
     s.style.width = w + 'px';
     s.addEventListener('input', function () { fn(s.selectedIndex); });
     place(s, x, y); fn(init);
+    return s;
   }
   function number(label, x, y, init, fn) {
-    lbl(label, x, y - 14);
-    var n = document.createElement('input'); n.type = 'number'; n.min = 0; n.max = 127; n.value = init; n.style.width = '62px';
+    var l = lbl(label, x, y - 14);
+    var n = document.createElement('input');
+    n.lbl = l; n.type = 'number'; n.min = 0; n.max = 127; n.value = init; n.style.width = '62px';
     n.addEventListener('input', function () { fn(+n.value); });
     place(n, x, y); fn(init);
+    return n;
   }
 
-  lbl('Mode', MX, ROWS[0]);
-  var tabs = place(document.createElement('div'), MX, ROWS[0] + 14); tabs.className = 'tabs';
-  ['Scale', 'MIDI'].forEach(function (t, i) {
+  // en modo Held, Root, Scale, Low y High no hacen nada: se atenúan
+  var scaleOnly = [];
+  function setMode(i) {
+    engine.mode(i);
+    scaleOnly.forEach(function (el) { el.classList.toggle('dim', i === 1); el.lbl.classList.toggle('dim', i === 1); });
+  }
+  lbl('Mode', NX + 66, 12);
+  var tabs = place(document.createElement('div'), NX + 66, 26); tabs.className = 'tabs';
+  ['Scale', 'Held'].forEach(function (t, i) {
     var b = document.createElement('button'); b.textContent = t; if (!i) b.className = 'on';
     b.addEventListener('click', function () {
-      tabs.querySelectorAll('button').forEach(function (o) { o.className = ''; }); b.className = 'on'; engine.mode(i);
+      tabs.querySelectorAll('button').forEach(function (o) { o.className = ''; }); b.className = 'on'; setMode(i);
     });
     tabs.appendChild(b);
   });
-  select('Root', MX, ROWS[1] + 14, 40, NN, 0, function (i) { engine.tonic(i); });
-  select('Scale', MX + 46, ROWS[1] + 14, 84, ['Major', 'Minor', 'Dorian', 'Phrygian', 'Lydian', 'Mixolydian', 'Harmonic Minor',
-    'Major Pentatonic', 'Minor Pentatonic', 'Blues', 'Chromatic'], 1, function (i) { engine.scale(i); });
-  number('Low', MX, ROWS[2] + 14, 48, function (v) { engine.low(v); });
-  number('High', MX + 68, ROWS[2] + 14, 72, function (v) { engine.high(v); });
-  select('Sync', MX, ROWS[3] + 14, 62, ['Free', '1/32', '1/16', '1/8', '1/4'], 0, function (i) { engine.sync(i); });
-  var credit = place(document.createElement('div'), 590 - 10 - 34, 169 - 18); credit.className = 'credit'; credit.textContent = 'mxnchv';
+  select('Sync', NX + 66, 58, 68, ['Free', '1/32', '1/16', '1/8', '1/4'], 0, function (i) { engine.sync(i); });
+  scaleOnly.push(select('Root', NX, 102, 40, NN, 0, function (i) { engine.tonic(i); }));
+  scaleOnly.push(select('Scale', NX + 46, 102, 88, ['Major', 'Minor', 'Dorian', 'Phrygian', 'Lydian', 'Mixolydian', 'Harmonic Minor',
+    'Major Pentatonic', 'Minor Pentatonic', 'Blues', 'Chromatic'], 1, function (i) { engine.scale(i); }));
+  scaleOnly.push(number('Low', NX, 138, 48, function (v) { engine.low(v); }));
+  scaleOnly.push(number('High', NX + 70, 138, 72, function (v) { engine.high(v); }));
+  scaleOnly.forEach(function (el) { el.style.width = el.tagName === 'INPUT' ? '64px' : el.style.width; });
+  var credit = place(document.createElement('div'), 412, 152); credit.className = 'credit'; credit.textContent = 'mxnchv';
 
   window.midirain = { engine: engine, ui: ui, knobs: knobs, globals: globals };
 
