@@ -4,7 +4,7 @@ Dispositivo Max for Live (MIDI Effect) para Ableton Live 12. Cae una lluvia de g
 
 Estética de [mxnchv.xyz](https://mxnchv.xyz): negro puro, blanco con transparencia y scanlines.
 
-La lluvia ocupa la izquierda (300 px) y los controles la derecha: knobs en 2×2 y menús en columna. Los knobs son los nativos de Live (`live.dial`) con colores en blanco y gris, y los textos usan la fuente de Live.
+La lluvia ocupa la izquierda (300 px) y los controles la derecha: knobs en 2×2 y menús en columna. Los knobs son los nativos de Live (`live.dial`) con colores en blanco y gris; el nombre y el valor van como textos aparte, encima y debajo del aro, para dejarles aire (el valor lo formatea el motor como Live: "30 %", "150 ms", "2.00 s"). Los textos usan la fuente de Live.
 
 ## Instalación
 
@@ -43,6 +43,7 @@ Con **Sync** activo, cuantiza tanto con Live en play como en stop. El motor lee 
 
 - `midirain_engine.js` corre en `[js midirain_engine.js ---mr]`, movido por un `[metro 10]` que arranca `[live.thisdevice]`. Contiene la simulación, las columnas y la salida de notas. `bang`/`tick`, `grid` y `note` llevan `.immediate = 1`.
 - `midirain_ui.js` corre en `[jsui]` y solo dibuja. Calcula la posición de cada gota en el instante de pintar, a partir del último paso del motor, para que el movimiento sea continuo. Lee el estado de un `Global` cuyo nombre es único por instancia (`---` se sustituye por un ID) y repinta al recibir `draw <nombreGlobal>`, unos 60 fps. Las notas no dependen nunca del repintado.
+- Valores de los knobs: motor (outlet 3, p. ej. `density 30 %`) → `[route density fall wind dur]` → `[prepend set]` → el texto bajo cada aro.
 - Salida: motor → `[unpack 0 0 0]` → `[makenote]` → `[pack 0 0]` → `[midiformat]` → `[midiout]`. Al desactivar el dispositivo, `makenote` recibe `stop` y apaga todo lo que suena.
 - Entrada: `[midiin]` → `[midiparse]` → `[prepend note]` → motor. Las notas de entrada no pasan a la salida.
 - Sync: el motor configura un `[metro 16n @quantize 16n]` (`interval`, `quantize`, `1`/`0`) que le devuelve `grid` en cada pulso: en valores de nota con el transporte en marcha, en ms (y sin `quantize`) con el transporte parado.

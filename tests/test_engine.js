@@ -303,6 +303,15 @@ test("viento por defecto en 10 y marca de tiempo del paso para que la UI extrapo
     assert.strictEqual(e.state().windN, 0.1);
 });
 
+test("texto del valor de cada knob, con el formato de Live", function () {
+    var e = load();
+    var c = e.ctx;
+    c.density(30); c.fall(39.6); c.wind(-20); c.dur(150); c.dur(2000);
+    assert.deepStrictEqual(outOf(e.out, 3), [
+        ["density", 30, "%"], ["fall", 40, "%"], ["wind", -20], ["dur", 150, "ms"], ["dur", "2.00", "s"]
+    ]);
+});
+
 test("tick y grid marcados como immediate", function () {
     var e = load();
     assert.strictEqual(e.ctx.bang.immediate, 1);

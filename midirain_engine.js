@@ -16,10 +16,12 @@
 //   outlet 2          control del metro de sync (interval / quantize / 1 / 0):
 //                     con Live en play, rejilla del transporte (16n…, alineada al compás);
 //                     con Live parado, la misma rejilla en ms al tempo del proyecto
+//   outlet 3          texto del valor de cada knob ("density 30 %", "dur 150 ms"…),
+//                     que se muestra debajo del live.dial
 
 autowatch = 0;
 inlets = 1;
-outlets = 3;
+outlets = 4;
 
 var MAX_DROPS = 400;
 var MAX_SPLASHES = 160;
@@ -370,10 +372,30 @@ function note(p, v) {
 }
 note.immediate = 1;
 
-function density(v) { P.density = clamp(Number(v), 0, 100); }
-function fall(v) { P.fall = clamp(Number(v), 0, 100); }
-function wind(v) { P.wind = clamp(Number(v), -100, 100); }
-function dur(v) { P.dur = clamp(Number(v), 10, 2000); }
+function density(v) {
+    P.density = clamp(Number(v), 0, 100);
+    outlet(3, "density", Math.round(P.density), "%");
+}
+
+function fall(v) {
+    P.fall = clamp(Number(v), 0, 100);
+    outlet(3, "fall", Math.round(P.fall), "%");
+}
+
+function wind(v) {
+    P.wind = clamp(Number(v), -100, 100);
+    outlet(3, "wind", Math.round(P.wind));
+}
+
+// como Live: "150 ms" hasta 1 s, "1.20 s" a partir de ahí
+function dur(v) {
+    P.dur = clamp(Number(v), 10, 2000);
+    if (P.dur >= 1000) {
+        outlet(3, "dur", (P.dur / 1000).toFixed(2), "s");
+    } else {
+        outlet(3, "dur", Math.round(P.dur), "ms");
+    }
+}
 
 function mode(v) {
     P.mode = Number(v) ? 1 : 0;

@@ -136,20 +136,33 @@ NUMBOX_COLORS = {
 }
 
 
-KNOB_W, KNOB_H = 56, 62     # ajustada a lo que pinta el live.dial: nombre, aro y valor
+# Knob: el live.dial nativo solo pinta el aro; el nombre y el valor son textos
+# aparte para poder dejar aire entre ellos y el aro (el dial no deja ajustarlo).
+# El valor lo escribe el motor con el formato de Live ("30 %", "150 ms", "2.00 s").
+KNOB_R = 17                # radio aproximado del aro
+KNOB_GAP = 5               # aire entre nombre / aro / valor
+KNOB_H = 9 + KNOB_GAP + 2 * KNOB_R + 4 + KNOB_GAP + 9    # alto del bloque nombre + aro + valor
+DIAL_BOX = 40              # caja del live.dial (aro + su grosor)
+KNOB_FONT = "Ableton Sans Bold"
 _knobs = []
 
 
-def dial(key, varname, longname, x, y, mmin, mmax, initial, unitstyle, exponent=None, ptype=0):
-    """live.dial nativo: nombre arriba, aro con aguja y valor debajo.
+def dial(key, varname, longname, cx, top, mmin, mmax, initial, unitstyle, value, exponent=None, ptype=0):
+    """Knob centrado en cx, con el nombre arriba (top) y el valor debajo.
     ptype 1 (entero) para que los porcentajes salgan sin decimal."""
     v = dict(mmin=float(mmin), mmax=float(mmax), initial=[float(initial)], unitstyle=unitstyle)
     if exponent:
         v["exponent"] = float(exponent)
     i = len(_knobs)
-    box(key, "live.dial", [20 + i * 64, 30, KNOB_W, KNOB_H], 1, 2, ["", "float"], pres=[x, y, KNOB_W, KNOB_H],
-        parameter_enable=1, varname=varname, showname=1, shownumber=1,
+    cy = top + 9 + KNOB_GAP + KNOB_R + 2
+    comment("n_" + key, longname, [20 + i * 64, 10, 60, 18], pres=[cx - 30, top - 3, 60, 14],
+            size=9.0, alpha=0.9, fontname=KNOB_FONT, textjustification=1)
+    box(key, "live.dial", [20 + i * 64, 30, DIAL_BOX, DIAL_BOX], 1, 2, ["", "float"],
+        pres=[cx - DIAL_BOX / 2, cy - DIAL_BOX / 2, DIAL_BOX, DIAL_BOX],
+        parameter_enable=1, varname=varname, showname=0, shownumber=0,
         saved_attribute_attributes=param(longname, longname, ptype, **v), **DIAL_COLORS)
+    comment("v_" + key, value, [20 + i * 64, 74, 60, 18], pres=[cx - 30, cy + KNOB_R + KNOB_GAP - 4, 60, 14],
+            size=9.0, alpha=0.9, fontname=KNOB_FONT, textjustification=1)
     _knobs.append(key)
     return key
 
@@ -194,9 +207,11 @@ CONTROLS = []              # (clave del control, selector del motor)
 # mismo alto (de TOP a BOTTOM), así ambas columnas quedan centradas y alineadas.
 TOP, BOTTOM = 13, 156
 ROW = (BOTTOM - TOP - 15 - 14) / 3.0       # paso entre filas de menús (nombre + caja)
-KX = [CX, CX + KNOB_W + 10]                # columnas de knobs
-KY = [TOP, BOTTOM - KNOB_H]                # filas de knobs
-MX = KX[1] + KNOB_W + 18                   # columna de menús
+KX = [CX + 30, CX + 96]                    # centros de las columnas de knobs
+KNOB_ROW_GAP = 8
+KY = [round(TOP + (BOTTOM - TOP - (2 * KNOB_H + KNOB_ROW_GAP)) / 2.0)]   # bloque centrado con los menús
+KY.append(KY[0] + KNOB_H + KNOB_ROW_GAP)
+MX = CX + 140                              # columna de menús
 
 
 def mrow(i):
@@ -211,16 +226,16 @@ def label(key, text, x, y):
             pres=[x - 4, y - 3, 60, 14], size=8.0)
 
 
-dial("density", "density", "Density", KX[0], KY[0], 0, 100, 30, 5, ptype=1)
+dial("density", "density", "Density", KX[0], KY[0], 0, 100, 30, 5, "30 %", ptype=1)
 CONTROLS.append(("density", "density"))
 
-dial("fall", "fall", "Fall", KX[1], KY[0], 0, 100, 40, 5, ptype=1)
+dial("fall", "fall", "Fall", KX[1], KY[0], 0, 100, 40, 5, "40 %", ptype=1)
 CONTROLS.append(("fall", "fall"))
 
-dial("wind", "wind", "Wind", KX[0], KY[1], -100, 100, 10, 0, ptype=1)
+dial("wind", "wind", "Wind", KX[0], KY[1], -100, 100, 10, 0, "10", ptype=1)
 CONTROLS.append(("wind", "wind"))
 
-dial("dur", "dur", "Length", KX[1], KY[1], 10, 2000, 150, 2, exponent=3)
+dial("dur", "dur", "Length", KX[1], KY[1], 10, 2000, 150, 2, "150 ms", exponent=3)
 CONTROLS.append(("dur", "dur"))
 
 ly, by = mrow(0)
@@ -307,7 +322,7 @@ obj("p_note", "prepend note", [500, 280, 80, 22], 1, 1)
 wire("midiin", "midiparse")
 wire("midiparse", "p_note", outlet=0)
 
-obj("engine", "js midirain_engine.js ---mr", [20, 420, 420, 22], 1, 3)
+obj("engine", "js midirain_engine.js ---mr", [20, 420, 420, 22], 1, 4)
 wire("tick", "engine")
 wire("gridmsg", "engine")
 wire("p_note", "engine")
@@ -316,6 +331,14 @@ wire("p_tempo", "engine")
 for ctl, _ in CONTROLS:
     wire("p_" + ctl, "engine")
 wire("engine", "ui", outlet=1)
+
+# valor de cada knob, ya formateado por el motor, al texto que hay debajo del aro
+obj("route_vals", "route " + " ".join(_knobs), [460, 450, 200, 22], 1, len(_knobs) + 1)
+for i, k in enumerate(_knobs):
+    obj("set_" + k, "prepend set", [460 + i * 80, 480, 76, 22], 1, 1)
+    wire("route_vals", "set_" + k, outlet=i)
+    wire("set_" + k, "v_" + k)
+wire("engine", "route_vals", outlet=3)
 wire("engine", "gridmetro", outlet=2)
 
 comment("c_out", "salida: makenote siempre manda el note-off", [20, 470, 280, 18])
