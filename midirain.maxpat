@@ -148,7 +148,7 @@
 					"presentation": 1,
 					"presentation_rect": [
 						312.0,
-						11.0,
+						25.0,
 						60.0,
 						14.0
 					],
@@ -160,7 +160,8 @@
 						1.0,
 						0.9
 					],
-					"textjustification": 1
+					"textjustification": 1,
+					"ignoreclick": 1
 				}
 			},
 			{
@@ -182,7 +183,7 @@
 					"presentation": 1,
 					"presentation_rect": [
 						322.0,
-						27.0,
+						41.0,
 						40.0,
 						40.0
 					],
@@ -264,7 +265,7 @@
 					"presentation": 1,
 					"presentation_rect": [
 						312.0,
-						65.0,
+						67.0,
 						60.0,
 						14.0
 					],
@@ -276,7 +277,8 @@
 						1.0,
 						0.9
 					],
-					"textjustification": 1
+					"textjustification": 1,
+					"ignoreclick": 1
 				}
 			},
 			{
@@ -295,7 +297,7 @@
 					"presentation": 1,
 					"presentation_rect": [
 						378.0,
-						11.0,
+						25.0,
 						60.0,
 						14.0
 					],
@@ -307,7 +309,8 @@
 						1.0,
 						0.9
 					],
-					"textjustification": 1
+					"textjustification": 1,
+					"ignoreclick": 1
 				}
 			},
 			{
@@ -329,7 +332,7 @@
 					"presentation": 1,
 					"presentation_rect": [
 						388.0,
-						27.0,
+						41.0,
 						40.0,
 						40.0
 					],
@@ -411,7 +414,7 @@
 					"presentation": 1,
 					"presentation_rect": [
 						378.0,
-						65.0,
+						67.0,
 						60.0,
 						14.0
 					],
@@ -423,7 +426,8 @@
 						1.0,
 						0.9
 					],
-					"textjustification": 1
+					"textjustification": 1,
+					"ignoreclick": 1
 				}
 			},
 			{
@@ -442,7 +446,7 @@
 					"presentation": 1,
 					"presentation_rect": [
 						312.0,
-						85.0,
+						87.0,
 						60.0,
 						14.0
 					],
@@ -454,7 +458,8 @@
 						1.0,
 						0.9
 					],
-					"textjustification": 1
+					"textjustification": 1,
+					"ignoreclick": 1
 				}
 			},
 			{
@@ -476,7 +481,7 @@
 					"presentation": 1,
 					"presentation_rect": [
 						322.0,
-						101.0,
+						103.0,
 						40.0,
 						40.0
 					],
@@ -558,7 +563,7 @@
 					"presentation": 1,
 					"presentation_rect": [
 						312.0,
-						139.0,
+						129.0,
 						60.0,
 						14.0
 					],
@@ -570,7 +575,8 @@
 						1.0,
 						0.9
 					],
-					"textjustification": 1
+					"textjustification": 1,
+					"ignoreclick": 1
 				}
 			},
 			{
@@ -589,7 +595,7 @@
 					"presentation": 1,
 					"presentation_rect": [
 						378.0,
-						85.0,
+						87.0,
 						60.0,
 						14.0
 					],
@@ -601,7 +607,8 @@
 						1.0,
 						0.9
 					],
-					"textjustification": 1
+					"textjustification": 1,
+					"ignoreclick": 1
 				}
 			},
 			{
@@ -623,7 +630,7 @@
 					"presentation": 1,
 					"presentation_rect": [
 						388.0,
-						101.0,
+						103.0,
 						40.0,
 						40.0
 					],
@@ -706,7 +713,7 @@
 					"presentation": 1,
 					"presentation_rect": [
 						378.0,
-						139.0,
+						129.0,
 						60.0,
 						14.0
 					],
@@ -718,7 +725,8 @@
 						1.0,
 						0.9
 					],
-					"textjustification": 1
+					"textjustification": 1,
+					"ignoreclick": 1
 				}
 			},
 			{

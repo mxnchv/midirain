@@ -180,7 +180,7 @@
 
   // mismas posiciones que en tools/build_device.py (layout A)
   var CX = 312, MX = 452;
-  var KX = [342, 408], KY = [14, 88], ROWS = [13, 51, 89, 127];   // KX: centro de cada knob; KY: arriba del nombre   // ROWS: arriba de cada nombre de menú
+  var KX = [342, 408], KY = [28, 90], ROWS = [13, 51, 89, 127];   // KX: centro de cada knob; KY: arriba del nombre   // ROWS: arriba de cada nombre de menú
   function place(el, x, y) { el.style.left = x + 'px'; el.style.top = y + 'px'; panel.appendChild(el); return el; }
   function lbl(text, x, y) { var d = document.createElement('div'); d.className = 'lbl'; d.textContent = text; place(d, x, y); }   // y: arriba del texto
 
@@ -188,25 +188,26 @@
   var SANS = '"Ableton Sans Medium", Helvetica, Arial, sans-serif';
   function knob(label, x, y, lo, hi, expo, init, unit, fn) {
     var c = document.createElement('canvas');
-    c.width = 60 * DPR; c.height = 66 * DPR;
-    c.style.width = '60px'; c.style.height = '66px';
+    c.width = 60 * DPR; c.height = 54 * DPR;
+    c.style.width = '60px'; c.style.height = '54px';
     place(c, x - 30, y);
     var g = c.getContext('2d');
     var pos = Math.pow((init - lo) / (hi - lo), 1 / expo), v = init;
     function paint() {
-      var cx = 30, cy = 33, r = 17, a0 = 0.75 * Math.PI, a1 = 2.25 * Math.PI;
+      // como lo pinta Live (medido): aro de ~26 px que empieza 13 px por debajo del nombre
+      var cx = 30, cy = 26, r = 12, a0 = 0.75 * Math.PI, a1 = 2.25 * Math.PI;
       var a = a0 + pos * (a1 - a0), from = lo < 0 ? 1.5 * Math.PI : a0;
       g.setTransform(DPR, 0, 0, DPR, 0, 0);
-      g.fillStyle = '#000'; g.fillRect(0, 0, 60, 66);
+      g.fillStyle = '#000'; g.fillRect(0, 0, 60, 54);
       g.textAlign = 'center'; g.font = 'bold 9px ' + SANS; g.fillStyle = 'rgba(255,255,255,0.9)';
-      g.fillText(label, cx, 8);
+      g.fillText(label, cx, 7);
       g.lineWidth = 2.5;
       g.strokeStyle = 'rgba(255,255,255,0.28)'; g.beginPath(); g.arc(cx, cy, r, a0, a1); g.stroke();
       g.strokeStyle = '#fff'; g.beginPath(); g.arc(cx, cy, r, Math.min(a, from), Math.max(a, from) + 0.001); g.stroke();
       g.lineWidth = 1.5; g.beginPath();
       g.moveTo(cx + Math.cos(a) * 4, cy + Math.sin(a) * 4); g.lineTo(cx + Math.cos(a) * (r - 1), cy + Math.sin(a) * (r - 1)); g.stroke();
       var txt = unit === 'ms' && v >= 1000 ? (v / 1000).toFixed(2) + ' s' : Math.round(v) + (unit ? ' ' + unit : '');
-      g.fillText(txt, cx, 62);
+      g.fillText(txt, cx, 49);
     }
     function set() { v = lo + (hi - lo) * Math.pow(pos, expo); paint(); fn(v); }
     var y0 = null;

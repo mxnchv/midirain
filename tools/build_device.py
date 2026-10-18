@@ -139,10 +139,15 @@ NUMBOX_COLORS = {
 # Knob: el live.dial nativo solo pinta el aro; el nombre y el valor son textos
 # aparte para poder dejar aire entre ellos y el aro (el dial no deja ajustarlo).
 # El valor lo escribe el motor con el formato de Live ("30 %", "150 ms", "2.00 s").
-KNOB_R = 17                # radio aproximado del aro
-KNOB_GAP = 5               # aire entre nombre / aro / valor
-KNOB_H = 9 + KNOB_GAP + 2 * KNOB_R + 4 + KNOB_GAP + 9    # alto del bloque nombre + aro + valor
-DIAL_BOX = 40              # caja del live.dial (aro + su grosor)
+#
+# Medido en Live 12 (captura a ×3,26): en una caja de 40 px, el aro empieza
+# arriba del todo y mide ~26 px; de su borde superior a las puntas de abajo del
+# arco hay ~24 px. Con estas posiciones queda ~5,5 px de aire entre el nombre y
+# el aro y lo mismo entre las puntas del arco y el valor.
+DIAL_BOX = 40              # caja del live.dial
+DIAL_Y = 13                # caja del dial, desde la parte de arriba del nombre
+VALUE_Y = 39               # texto del valor, desde la parte de arriba del nombre
+KNOB_H = 50                # alto visible del bloque nombre + aro + valor
 KNOB_FONT = "Ableton Sans Bold"
 _knobs = []
 
@@ -154,15 +159,14 @@ def dial(key, varname, longname, cx, top, mmin, mmax, initial, unitstyle, value,
     if exponent:
         v["exponent"] = float(exponent)
     i = len(_knobs)
-    cy = top + 9 + KNOB_GAP + KNOB_R + 2
     comment("n_" + key, longname, [20 + i * 64, 10, 60, 18], pres=[cx - 30, top - 3, 60, 14],
-            size=9.0, alpha=0.9, fontname=KNOB_FONT, textjustification=1)
+            size=9.0, alpha=0.9, fontname=KNOB_FONT, textjustification=1, ignoreclick=1)
     box(key, "live.dial", [20 + i * 64, 30, DIAL_BOX, DIAL_BOX], 1, 2, ["", "float"],
-        pres=[cx - DIAL_BOX / 2, cy - DIAL_BOX / 2, DIAL_BOX, DIAL_BOX],
+        pres=[cx - DIAL_BOX / 2, top + DIAL_Y, DIAL_BOX, DIAL_BOX],
         parameter_enable=1, varname=varname, showname=0, shownumber=0,
         saved_attribute_attributes=param(longname, longname, ptype, **v), **DIAL_COLORS)
-    comment("v_" + key, value, [20 + i * 64, 74, 60, 18], pres=[cx - 30, cy + KNOB_R + KNOB_GAP - 4, 60, 14],
-            size=9.0, alpha=0.9, fontname=KNOB_FONT, textjustification=1)
+    comment("v_" + key, value, [20 + i * 64, 74, 60, 18], pres=[cx - 30, top + VALUE_Y, 60, 14],
+            size=9.0, alpha=0.9, fontname=KNOB_FONT, textjustification=1, ignoreclick=1)
     _knobs.append(key)
     return key
 
@@ -208,7 +212,7 @@ CONTROLS = []              # (clave del control, selector del motor)
 TOP, BOTTOM = 13, 156
 ROW = (BOTTOM - TOP - 15 - 14) / 3.0       # paso entre filas de menús (nombre + caja)
 KX = [CX + 30, CX + 96]                    # centros de las columnas de knobs
-KNOB_ROW_GAP = 8
+KNOB_ROW_GAP = 12
 KY = [round(TOP + (BOTTOM - TOP - (2 * KNOB_H + KNOB_ROW_GAP)) / 2.0)]   # bloque centrado con los menús
 KY.append(KY[0] + KNOB_H + KNOB_ROW_GAP)
 MX = CX + 140                              # columna de menús
