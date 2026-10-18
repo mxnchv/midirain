@@ -1,7 +1,7 @@
 // midirain_knob.js
 // Knob de midirain en [jsui]: aro gris abierto por abajo, el recorrido en blanco
 // y debajo el nombre y el valor. Solo dibuja: va encima de un live.dial transparente
-// (con ignoreclick), que es el que recibe el ratón, la automatización y el
+// (con ignoreclick) y lo tapa con su fondo negro; el dial es el que recibe el ratón, la automatización y el
 // MIDI map, y le manda su valor por la entrada. ES5.
 //
 // jsarguments: etiqueta mínimo máximo exponente inicial [unidad]
@@ -81,6 +81,11 @@ function paint() {
     var from = (lo < 0) ? 1.5 * Math.PI : A0;   // bipolar: desde arriba
     var v0 = Math.min(a, from);
     var v1 = Math.max(a, from, v0 + 0.01);     // en bipolar centrado, un punto arriba
+
+    // fondo negro opaco: tapa por completo el live.dial que hay debajo
+    mgraphics.set_source_rgba(0, 0, 0, 1);
+    mgraphics.rectangle(0, 0, W, sz[1]);
+    mgraphics.fill();
 
     mgraphics.set_line_cap("round");
     mgraphics.set_line_width(STROKE);
