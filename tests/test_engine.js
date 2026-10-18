@@ -306,10 +306,32 @@ test("viento por defecto en 10 y marca de tiempo del paso para que la UI extrapo
 test("texto del valor de cada knob, con el formato de Live", function () {
     var e = load();
     var c = e.ctx;
-    c.density(30); c.fall(39.6); c.wind(-20); c.dur(150); c.dur(2000);
+    c.density(30); c.fall(39.6); c.wind(-20); c.distance(75); c.dur(150);
     assert.deepStrictEqual(outOf(e.out, 3), [
-        ["density", 30, "%"], ["fall", 40, "%"], ["wind", -20], ["dur", 150, "ms"], ["dur", "2.00", "s"]
-    ]);
+        ["density", 30, "%"], ["fall", 40, "%"], ["wind", -20], ["distance", 75, "%"]
+    ], "Length no manda texto: es una casilla que muestra su valor");
+});
+
+test("Distance: al 50 % el reparto de tamaños de siempre; más lejos, gotas más pequeñas", function () {
+    // mismo azar en las dos cargas: comparamos el tamaño de las gotas que nacen
+    function sizes(dist) {
+        var seed = 12345;
+        var e = load({ random: function () { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; } });
+        e.ctx.fall(0);
+        if (dist !== null) e.ctx.distance(dist);
+        e.ctx.density(100);
+        e.advance(10); e.ctx.bang();
+        for (var i = 0; i < 100; i++) { e.advance(10); e.ctx.bang(); }
+        return Array.from(e.state().drops, function (d) { return d.s; });   // array del contexto de aquí
+    }
+    function mean(a) { return a.reduce(function (x, y) { return x + y; }, 0) / a.length; }
+    assert.deepStrictEqual(sizes(50), sizes(null), "Distance 50 = comportamiento por defecto");
+    var near = mean(sizes(0)), mid = mean(sizes(50)), far = mean(sizes(100));
+    assert.ok(near > mid && mid > far, "cerca " + near.toFixed(2) + " > medio " + mid.toFixed(2) + " > lejos " + far.toFixed(2));
+    // el reparto por defecto es el de antes: s = random^1.7
+    var seed = 12345, r = function () { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+    var e = load({ random: r });
+    assert.ok(Math.abs(e.ctx.sizeExponent() - 1.7) < 1e-12);
 });
 
 test("tick y grid marcados como immediate", function () {

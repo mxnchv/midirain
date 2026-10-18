@@ -22,12 +22,12 @@
   #panel { font-family: "Ableton Sans Medium", Helvetica, Arial, sans-serif; }
   #panel .lbl { font-size: 9px; color: rgba(255,255,255,0.55); }
   #panel .credit { font-size: 8px; color: rgba(255,255,255,0.3); }
-  #panel .groupsep { left: 448px; top: 14px; width: 1px; height: 142px; background: rgba(255,255,255,0.12); }
+  #panel .groupsep { left: 448px; top: 14px; width: 1px; height: 136px; background: rgba(255,255,255,0.12); }
   #panel .dim { opacity: 0.3; }
   select, input[type=number] { background: #000; color: #fff; border: 1px solid rgba(255,255,255,0.3);
          font: inherit; font-size: 8px; height: 15px; padding: 0 3px; border-radius: 0; }
   .tabs { display: flex; }
-  .tabs button { width: 34px; height: 14px; font: inherit; font-size: 8px; background: #000;
+  .tabs button { width: 67px; height: 14px; font: inherit; font-size: 8px; background: #000;
          color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.3); }
   .tabs button.on { background: #fff; color: #000; }
   .log { position: fixed; bottom: 12px; left: 16px; right: 16px; font-size: 10px;
@@ -150,7 +150,7 @@
   Task.prototype.cancel = function () { clearTimeout(this.id); };
 
   var NAMES = ['bang', 'tick', 'grid', 'note', 'density', 'fall', 'wind', 'dur', 'mode', 'tonic', 'scale',
-    'low', 'high', 'sync', 'draw', 'paint', 'msg_float'];
+    'low', 'high', 'sync', 'distance', 'draw', 'paint', 'msg_float'];
   function load(src, env) {
     var ret = '{' + NAMES.map(function (n) { return n + ': typeof ' + n + ' === "function" ? ' + n + ' : null'; }).join(',') + '}';
     var f = new Function('outlet', 'Global', 'jsarguments', 'mgraphics', 'box', 'post', 'Task',
@@ -224,11 +224,13 @@
     set();
     knobs.push({ set: function (p) { pos = p; set(); } });
   }
+  // lluvia en 2×2
   knob('Density', 342, 16, 0, 100, 1, 30, '%', function (v) { engine.density(v); });
   knob('Fall', 408, 16, 0, 100, 1, 40, '%', function (v) { engine.fall(v); });
-  knob('Wind', 375, 98, -100, 100, 1, 10, '', function (v) { engine.wind(v); });
+  knob('Wind', 342, 92, -100, 100, 1, 10, '', function (v) { engine.wind(v); });
+  knob('Distance', 408, 92, 0, 100, 1, 50, '%', function (v) { engine.distance(v); });
   place(document.createElement('div'), 448, 14).className = 'groupsep';
-  knob('Length', NX + 28, 12, 10, 2000, 3, 150, 'ms', function (v) { engine.dur(v); });
+  var NROWS = [11, 47, 83, 119];   // arriba del nombre de cada fila de notas; la caja va 14 px más abajo
 
   function select(label, x, y, w, items, init, fn) {
     var l = lbl(label, x, y - 14);
@@ -243,7 +245,7 @@
   function number(label, x, y, init, fn) {
     var l = lbl(label, x, y - 14);
     var n = document.createElement('input');
-    n.lbl = l; n.type = 'number'; n.min = 0; n.max = 127; n.value = init; n.style.width = '62px';
+    n.lbl = l; n.type = 'number'; n.min = 0; n.max = 127; n.value = init; n.style.width = '64px';
     n.addEventListener('input', function () { fn(+n.value); });
     place(n, x, y); fn(init);
     return n;
@@ -255,8 +257,8 @@
     engine.mode(i);
     scaleOnly.forEach(function (el) { el.classList.toggle('dim', i === 1); el.lbl.classList.toggle('dim', i === 1); });
   }
-  lbl('Mode', NX + 66, 12);
-  var tabs = place(document.createElement('div'), NX + 66, 26); tabs.className = 'tabs';
+  lbl('Mode', NX, NROWS[0]);
+  var tabs = place(document.createElement('div'), NX, NROWS[0] + 14); tabs.className = 'tabs';
   ['Scale', 'Held'].forEach(function (t, i) {
     var b = document.createElement('button'); b.textContent = t; if (!i) b.className = 'on';
     b.addEventListener('click', function () {
@@ -264,14 +266,15 @@
     });
     tabs.appendChild(b);
   });
-  select('Sync', NX + 66, 58, 68, ['Free', '1/32', '1/16', '1/8', '1/4'], 0, function (i) { engine.sync(i); });
-  scaleOnly.push(select('Root', NX, 102, 40, NN, 0, function (i) { engine.tonic(i); }));
-  scaleOnly.push(select('Scale', NX + 46, 102, 88, ['Major', 'Minor', 'Dorian', 'Phrygian', 'Lydian', 'Mixolydian', 'Harmonic Minor',
+  var len = number('Length', NX, NROWS[1] + 14, 150, function (v) { engine.dur(v); });
+  len.min = 10; len.max = 2000;   // en Live es una casilla de tiempo ("150 ms")
+  select('Sync', NX + 70, NROWS[1] + 14, 64, ['Free', '1/32', '1/16', '1/8', '1/4'], 0, function (i) { engine.sync(i); });
+  scaleOnly.push(select('Root', NX, NROWS[2] + 14, 40, NN, 0, function (i) { engine.tonic(i); }));
+  scaleOnly.push(select('Scale', NX + 46, NROWS[2] + 14, 88, ['Major', 'Minor', 'Dorian', 'Phrygian', 'Lydian', 'Mixolydian', 'Harmonic Minor',
     'Major Pentatonic', 'Minor Pentatonic', 'Blues', 'Chromatic'], 1, function (i) { engine.scale(i); }));
-  scaleOnly.push(number('Low', NX, 138, 48, function (v) { engine.low(v); }));
-  scaleOnly.push(number('High', NX + 70, 138, 72, function (v) { engine.high(v); }));
-  scaleOnly.forEach(function (el) { el.style.width = el.tagName === 'INPUT' ? '64px' : el.style.width; });
-  var credit = place(document.createElement('div'), 412, 152); credit.className = 'credit'; credit.textContent = 'mxnchv';
+  scaleOnly.push(number('Low', NX, NROWS[3] + 14, 48, function (v) { engine.low(v); }));
+  scaleOnly.push(number('High', NX + 70, NROWS[3] + 14, 72, function (v) { engine.high(v); }));
+  var credit = place(document.createElement('div'), 610 - 16 - 30, 153); credit.className = 'credit'; credit.textContent = 'mxnchv';
 
   window.midirain = { engine: engine, ui: ui, knobs: knobs, globals: globals };
 

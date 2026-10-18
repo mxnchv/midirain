@@ -9,14 +9,14 @@
 //   note p v          nota de la entrada MIDI (modo MIDI)
 //   playing 0|1       estado del transporte de Live (live.observer is_playing)
 //   tempo bpm         tempo de Live (live.observer tempo)
-//   density / fall / wind / dur / mode / tonic / scale / low / high / sync <valor>
+//   density / fall / wind / distance / dur / mode / tonic / scale / low / high / sync <valor>
 // Salida:
 //   outlet 0          pitch velocity duración  ->  [unpack 0 0 0] -> [makenote]
 //   outlet 1          draw <nombreGlobal>      ->  [jsui midirain_ui.js]
 //   outlet 2          control del metro de sync (interval / quantize / 1 / 0):
 //                     con Live en play, rejilla del transporte (16n…, alineada al compás);
 //                     con Live parado, la misma rejilla en ms al tempo del proyecto
-//   outlet 3          texto del valor de cada knob ("density 30 %", "dur 150 ms"…),
+//   outlet 3          texto del valor de cada knob ("density 30 %", "wind 10"…),
 //                     que se muestra debajo del live.dial
 
 autowatch = 0;
@@ -69,6 +69,7 @@ var P = {
     density: 30,    // %
     fall: 40,       // %
     wind: 10,       // -100..100, un poco de inclinación por defecto
+    distance: 50,   // %: 50 = reparto de tamaños de siempre; más = lluvia más lejana
     dur: 150,       // ms
     mode: 0,        // 0 Escala, 1 MIDI
     tonic: 0,
@@ -189,8 +190,15 @@ function spawnRate() {
     return 60 * d * d;
 }
 
+// Exponente del reparto de tamaños: s = random^exp. Con exp > 1 abundan las
+// gotas pequeñas (lejanas, suaves). Distance al 50 % da 1.7, el reparto de
+// siempre; al 100 %, 6.8 (casi todo llovizna); al 0 %, 0.425 (casi todo goterones).
+function sizeExponent() {
+    return 1.7 * Math.pow(4, (P.distance - 50) / 50);
+}
+
 function spawnDrop() {
-    var s = Math.pow(Math.random(), 1.7);   // mayoría de gotas pequeñas
+    var s = Math.pow(Math.random(), sizeExponent());
     return {
         x: Math.random(),
         y: -Math.random() * 0.08,
@@ -387,14 +395,14 @@ function wind(v) {
     outlet(3, "wind", Math.round(P.wind));
 }
 
-// como Live: "150 ms" hasta 1 s, "1.20 s" a partir de ahí
+function distance(v) {
+    P.distance = clamp(Number(v), 0, 100);
+    outlet(3, "distance", Math.round(P.distance), "%");
+}
+
+// Length es una casilla numérica (live.numbox), que ya muestra su propio valor
 function dur(v) {
     P.dur = clamp(Number(v), 10, 2000);
-    if (P.dur >= 1000) {
-        outlet(3, "dur", (P.dur / 1000).toFixed(2), "s");
-    } else {
-        outlet(3, "dur", Math.round(P.dur), "ms");
-    }
 }
 
 function mode(v) {

@@ -187,11 +187,14 @@ def tab(key, varname, longname, items, initial, rect, pres):
                saved_attribute_attributes=param(longname, longname, 2, **v), **TAB_COLORS)
 
 
-def numbox(key, varname, longname, initial, rect, pres):
-    v = dict(mmin=0.0, mmax=127.0, initial=[float(initial)], unitstyle=8)
+def numbox(key, varname, longname, initial, rect, pres, mmin=0, mmax=127, unitstyle=8, ptype=1, exponent=None):
+    """Casilla numérica; por defecto, una nota MIDI (C3 = 60)."""
+    v = dict(mmin=float(mmin), mmax=float(mmax), initial=[float(initial)], unitstyle=unitstyle)
+    if exponent:
+        v["exponent"] = float(exponent)
     return box(key, "live.numbox", rect, 1, 2, ["", "float"], pres=pres,
                parameter_enable=1, varname=varname,
-               saved_attribute_attributes=param(longname, longname, 1, **v), **NUMBOX_COLORS)
+               saved_attribute_attributes=param(longname, longname, ptype, **v), **NUMBOX_COLORS)
 
 
 # ---------------------------------------------------------------------------
@@ -207,70 +210,81 @@ box("ui", "jsui", [460, 480, RAIN_W, DEVICE_H], 1, 0, pres=[0, 0, RAIN_W, DEVICE
 
 # ---------------------------------------------------------------------------
 # controles en dos grupos, separados por una línea:
-#   lluvia (Density, Fall arriba; Wind centrado debajo)
-#   notas: arriba lo que siempre aplica (Length, Mode, Sync);
-#          abajo lo que solo aplica en modo Scale (Root, Scale, Low, High),
-#          que se atenúa entero en modo Held
+#   lluvia: knobs en 2x2 (Density, Fall / Wind, Distance)
+#   notas: una rejilla de recuadros; arriba lo que siempre aplica (Mode,
+#          Length, Sync), abajo lo que solo aplica en modo Scale (Root, Scale,
+#          Low, High), que se atenúa entero en modo Held
 
 CONTROLS = []              # (clave del control, selector del motor)
+RX = [342, 408]            # centros de las columnas de knobs
+RY = [16, 92]              # filas de knobs (parte de arriba del nombre)
 NX = 460                   # x del grupo de notas
+NROWS = [11, 47, 83, 119]  # filas de notas (parte de arriba del nombre; la caja va 14 px más abajo)
 SCALE_ONLY = ["tonic", "scale", "low", "high"]
 
 
 def label(key, text, x, y):
-    """Nombre encima de un menú; y es la parte de arriba del texto."""
+    """Nombre encima de un recuadro; y es la parte de arriba del texto."""
     comment(key, text, [700.0 + 70 * (len(CONTROLS) % 4), 120.0 + 24 * (len(CONTROLS) // 4), 60, 18],
             pres=[x - 4, y - 3, 60, 14], size=9.0, alpha=LABEL_ALPHA, ignoreclick=1)
 
 
 # lluvia
-dial("density", "density", "Density", 342, 16, 0, 100, 30, 5, "30 %", ptype=1)
+dial("density", "density", "Density", RX[0], RY[0], 0, 100, 30, 5, "30 %", ptype=1)
 CONTROLS.append(("density", "density"))
-dial("fall", "fall", "Fall", 408, 16, 0, 100, 40, 5, "40 %", ptype=1)
+dial("fall", "fall", "Fall", RX[1], RY[0], 0, 100, 40, 5, "40 %", ptype=1)
 CONTROLS.append(("fall", "fall"))
-dial("wind", "wind", "Wind", 375, 98, -100, 100, 10, 0, "10", ptype=1)
+dial("wind", "wind", "Wind", RX[0], RY[1], -100, 100, 10, 0, "10", ptype=1)
 CONTROLS.append(("wind", "wind"))
+dial("distance", "distance", "Distance", RX[1], RY[1], 0, 100, 50, 5, "50 %", ptype=1)
+CONTROLS.append(("distance", "distance"))
 
-box("groupsep", "panel", [790, 10, 10, 30], 1, 0, pres=[448, 14, 1, 142],
+box("groupsep", "panel", [790, 10, 10, 30], 1, 0, pres=[448, 14, 1, 136],
     background=1, bgcolor=white(0.12), border=0, rounded=0, ignoreclick=1)
 
 # notas: siempre
-dial("dur", "dur", "Length", NX + 28, 12, 10, 2000, 150, 2, "150 ms", exponent=3)
-CONTROLS.append(("dur", "dur"))
-
-label("l_mode", "Mode", NX + 66, 12)
-tab("mode", "mode", "Mode", ["Scale", "Held"], 0, [260, 30, 68, 15], [NX + 66, 26, 68, 15])
+y = NROWS[0]
+label("l_mode", "Mode", NX, y)
+tab("mode", "mode", "Mode", ["Scale", "Held"], 0, [260, 30, 134, 15], [NX, y + 14, 134, 15])
 CONTROLS.append(("mode", "mode"))
 
-label("l_sync", "Sync", NX + 66, 44)
+y = NROWS[1]
+label("l_dur", "Length", NX, y)
+numbox("dur", "dur", "Length", 150, [620, 60, 64, 15], [NX, y + 14, 64, 15],
+       mmin=10, mmax=2000, unitstyle=2, ptype=0, exponent=3)
+CONTROLS.append(("dur", "dur"))
+
+label("l_sync", "Sync", NX + 70, y)
 menu("sync", "sync", "Sync", ["Free", "1/32", "1/16", "1/8", "1/4"], 0,
-     [340, 30, 68, 15], [NX + 66, 58, 68, 15])
+     [340, 30, 64, 15], [NX + 70, y + 14, 64, 15])
 CONTROLS.append(("sync", "sync"))
 
 # notas: solo en modo Scale
-label("l_tonic", "Root", NX, 88)
+y = NROWS[2]
+label("l_tonic", "Root", NX, y)
 menu("tonic", "tonic", "Root",
      ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"], 0,
-     [420, 30, 40, 15], [NX, 102, 40, 15])
+     [420, 30, 40, 15], [NX, y + 14, 40, 15])
 CONTROLS.append(("tonic", "tonic"))
 
-label("l_scale", "Scale", NX + 46, 88)
+label("l_scale", "Scale", NX + 46, y)
 menu("scale", "scale", "Scale",
      ["Major", "Minor", "Dorian", "Phrygian", "Lydian", "Mixolydian", "Harmonic Minor",
       "Major Pentatonic", "Minor Pentatonic", "Blues", "Chromatic"], 1,
-     [480, 30, 88, 15], [NX + 46, 102, 88, 15])
+     [480, 30, 88, 15], [NX + 46, y + 14, 88, 15])
 CONTROLS.append(("scale", "scale"))
 
-label("l_low", "Low", NX, 124)
-numbox("low", "low", "Low", 48, [620, 30, 64, 15], [NX, 138, 64, 15])
+y = NROWS[3]
+label("l_low", "Low", NX, y)
+numbox("low", "low", "Low", 48, [620, 30, 64, 15], [NX, y + 14, 64, 15])
 CONTROLS.append(("low", "low"))
 
-label("l_high", "High", NX + 70, 124)
-numbox("high", "high", "High", 72, [680, 30, 64, 15], [NX + 70, 138, 64, 15])
+label("l_high", "High", NX + 70, y)
+numbox("high", "high", "High", 72, [680, 30, 64, 15], [NX + 70, y + 14, 64, 15])
 CONTROLS.append(("high", "high"))
 
-# firma: bajo el grupo de lluvia, que es donde queda hueco
-comment("credit", "mxnchv", [760, 100, 60, 18], pres=[394, 151, 48, 14],
+# firma, abajo a la derecha
+comment("credit", "mxnchv", [760, 100, 60, 18], pres=[DEVICE_W - 16 - 48, 152, 48, 14],
         size=8.0, alpha=0.3, textjustification=2, ignoreclick=1)
 
 # ---------------------------------------------------------------------------
