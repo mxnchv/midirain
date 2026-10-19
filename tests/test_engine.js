@@ -165,15 +165,24 @@ test("delta-time recortado a 100 ms", function () {
     assert.ok(Math.abs(e.state().drops[0].y - 0.1) < 1e-9);
 });
 
-test("sync: los impactos se encolan y suenan en el pulso de la rejilla", function () {
+test("sync: arranca las dos rejillas (transporte en valores de nota, libre en ms)", function () {
+    var e = load();
+    var c = e.ctx;
+    c.tempo(120);
+    c.sync(2);                                  // 1/16 a 120 bpm = 125 ms
+    assert.deepStrictEqual(outOf(e.out, 2).slice(-3), [["interval", "16n"], ["quantize", "16n"], [1]]);
+    assert.deepStrictEqual(outOf(e.out, 4).slice(-2), [["interval", 125], [1]]);
+    c.sync(0);
+    assert.deepStrictEqual(outOf(e.out, 2).slice(-1), [[0]]);
+    assert.deepStrictEqual(outOf(e.out, 4).slice(-1), [[0]]);
+});
+
+test("sync en play: los impactos se encolan y suenan en el pulso del transporte", function () {
     var e = load();
     var c = e.ctx;
     c.density(0);
-    c.playing(1);
     c.sync(2);
-    var ctl = outOf(e.out, 2).slice(-3);
-    assert.deepStrictEqual(ctl, [["interval", "16n"], ["quantize", "16n"], [1]]);
-    c.grid();                                   // hay transporte
+    c.gridt();
     e.advance(10); c.bang();
     e.state().drops = [
         { x: 0.01, y: 0.999, vy: 1, s: 0.2 },
@@ -182,7 +191,7 @@ test("sync: los impactos se encolan y suenan en el pulso de la rejilla", functio
     ];
     e.advance(10); c.bang();
     assert.strictEqual(notesOf(e.out).length, 0, "nada antes del pulso");
-    e.advance(100); c.grid();
+    e.advance(100); c.gridt();
     var n = notesOf(e.out);
     assert.strictEqual(n.length, 2);
     assert.strictEqual(n[0][0], 48);
@@ -190,93 +199,116 @@ test("sync: los impactos se encolan y suenan en el pulso de la rejilla", functio
     assert.strictEqual(n[1][0], 72);
 });
 
-test("sync: sin pulsos durante más de 400 ms, suena inmediatamente", function () {
-    var e = load();
-    var c = e.ctx;
-    c.density(0);
-    c.sync(3);
-    c.grid();
-    e.advance(10); c.bang();
-    e.state().drops = [{ x: 0.5, y: 0.999, vy: 1, s: 0.5 }];
-    e.advance(10); c.bang();
-    assert.strictEqual(notesOf(e.out).length, 0);
-    for (var i = 0; i < 38; i++) { e.advance(10); c.bang(); }   // ~400 ms desde el pulso
-    assert.strictEqual(notesOf(e.out).length, 0, "aún dentro de la ventana");
-    for (i = 0; i < 3; i++) { e.advance(10); c.bang(); }
-    assert.strictEqual(notesOf(e.out).length, 1, "fallback");
-    // con el transporte parado, los siguientes impactos suenan en el mismo tick
-    e.state().drops = [{ x: 0.1, y: 0.999, vy: 1, s: 0.5 }];
-    e.advance(10); c.bang();
-    assert.strictEqual(notesOf(e.out).length, 2);
-});
-
-test("sync lento: con el tempo de Live, espera el pulso aunque tarde más de 400 ms", function () {
-    var e = load();
-    var c = e.ctx;
-    c.density(0);
-    c.tempo(60);
-    c.playing(1);
-    c.sync(4);                                  // 1/4 a 60 bpm = 1000 ms
-    c.grid();                                   // primer pulso: aún no hay intervalo medido
-    e.advance(10); c.bang();
-    e.state().drops = [{ x: 0.5, y: 0.999, vy: 1, s: 0.5 }];
-    e.advance(10); c.bang();
-    for (var i = 0; i < 97; i++) { e.advance(10); c.bang(); }   // 990 ms tras el pulso
-    assert.strictEqual(notesOf(e.out).length, 0, "no se adelanta al pulso");
-    e.advance(10); c.grid();
-    assert.strictEqual(notesOf(e.out).length, 1);
-});
-
-test("sync: al activarlo con el transporte en marcha, espera el primer pulso", function () {
-    var e = load();
-    var c = e.ctx;
-    c.density(0);
-    c.tempo(60);
-    c.playing(1);
-    e.advance(10); c.bang();
-    c.sync(3);                                  // 1/8 a 60 bpm = 500 ms, aún sin pulsos
-    e.state().drops = [{ x: 0.5, y: 0.999, vy: 1, s: 0.5 }];
-    for (var i = 0; i < 45; i++) { e.advance(10); c.bang(); }
-    assert.strictEqual(notesOf(e.out).length, 0);
-    c.grid();
-    assert.strictEqual(notesOf(e.out).length, 1);
-});
-
-test("sync con Live parado: rejilla propia en ms al tempo, y sigue cuantizando", function () {
+test("sync en play: los pulsos de la rejilla libre se ignoran (no desalinean)", function () {
     var e = load();
     var c = e.ctx;
     c.density(0);
     c.tempo(120);
-    c.playing(1);
-    c.sync(2);                                  // 1/16 a 120 bpm = 125 ms
-    c.playing(0);
-    assert.deepStrictEqual(outOf(e.out, 2).slice(-3), [["quantize", 0], ["interval", 125], [1]],
-        "parado: metro en ms, que corre sin transporte");
-    c.grid();
+    c.sync(3);                                  // 1/8 a 120 bpm = 250 ms
+    c.gridt();
+    e.advance(10); c.bang();
+    e.state().drops = [{ x: 0.5, y: 0.999, vy: 1, s: 0.5 }];
+    e.advance(10); c.bang();
+    e.advance(100); c.gridf();                  // pulso libre a destiempo, con el transporte en marcha
+    assert.strictEqual(notesOf(e.out).length, 0, "la libre no manda en play");
+    e.advance(130); c.gridt();
+    assert.strictEqual(notesOf(e.out).length, 1, "suena en el pulso del transporte");
+});
+
+test("sync parado: sin pulsos del transporte, manda la rejilla libre", function () {
+    var e = load();
+    var c = e.ctx;
+    c.density(0);
+    c.sync(2);
+    c.gridf();
     e.advance(10); c.bang();
     e.state().drops = [{ x: 0.5, y: 0.999, vy: 1, s: 0.5 }];
     for (var i = 0; i < 10; i++) { e.advance(10); c.bang(); }
     assert.strictEqual(notesOf(e.out).length, 0, "parado también espera al pulso");
-    c.grid();
+    c.gridf();
     assert.strictEqual(notesOf(e.out).length, 1);
-
-    c.tempo(60);                                // la rejilla en ms sigue al tempo
-    assert.deepStrictEqual(outOf(e.out, 2).slice(-3), [["quantize", 0], ["interval", 250], [1]]);
-    c.playing(1);                               // en play vuelve a la rejilla del transporte
-    assert.deepStrictEqual(outOf(e.out, 2).slice(-3), [["interval", "16n"], ["quantize", "16n"], [1]]);
 });
 
-test("volver a Libre para el metro y vacía la cola", function () {
+test("al parar Live, la rejilla libre toma el relevo pasada la ventana", function () {
     var e = load();
     var c = e.ctx;
     c.density(0);
-    c.sync(1); c.grid();
+    c.tempo(120);
+    c.sync(3);                                  // 250 ms; ventana = 400 ms
+    c.gridt();                                  // último pulso del transporte: Live para
+    e.advance(10); c.bang();
+    e.state().drops = [{ x: 0.5, y: 0.999, vy: 1, s: 0.5 }];
+    e.advance(10); c.bang();
+    e.advance(240); c.gridf();                  // aún dentro de la ventana: se ignora
+    assert.strictEqual(notesOf(e.out).length, 0);
+    e.advance(200); c.gridf();                  // 450 ms sin transporte: manda la libre
+    assert.strictEqual(notesOf(e.out).length, 1);
+});
+
+test("sync: el tempo de Live ajusta la rejilla libre", function () {
+    var e = load();
+    var c = e.ctx;
+    c.sync(2);
+    c.tempo(60);
+    assert.deepStrictEqual(outOf(e.out, 4).slice(-1), [["interval", 250]], "1/16 a 60 bpm");
+    c.tempo("tempo", 30);                       // con el nombre de la propiedad delante
+    assert.deepStrictEqual(outOf(e.out, 4).slice(-1), [["interval", 500]]);
+});
+
+test("sync: sin el tempo de Live, lo mide de los pulsos del transporte", function () {
+    var e = load();
+    var c = e.ctx;
+    c.sync(3);                                  // 1/8
+    c.gridt(); e.advance(500); c.gridt();       // un 1/8 cada 500 ms = 60 bpm
+    assert.deepStrictEqual(outOf(e.out, 4).slice(-1), [["interval", 500]]);
+    var f = load();
+    f.ctx.tempo(90);                            // si Live da el tempo, manda ese
+    f.ctx.sync(3);
+    f.ctx.gridt(); f.advance(500); f.ctx.gridt();
+    assert.deepStrictEqual(outOf(f.out, 4).slice(-1), [[1]], "no cambia el intervalo por la medida");
+});
+
+test("sync: sin pulsos de ninguna rejilla durante más de 400 ms, suena igualmente", function () {
+    var e = load();
+    var c = e.ctx;
+    c.density(0);
+    c.sync(3);
+    c.gridt();
+    e.advance(10); c.bang();
+    e.state().drops = [{ x: 0.5, y: 0.999, vy: 1, s: 0.5 }];
+    e.advance(10); c.bang();
+    for (var i = 0; i < 38; i++) { e.advance(10); c.bang(); }
+    assert.strictEqual(notesOf(e.out).length, 0, "aún dentro de la ventana");
+    for (i = 0; i < 3; i++) { e.advance(10); c.bang(); }
+    assert.strictEqual(notesOf(e.out).length, 1, "red de seguridad");
+});
+
+test("sync lento: espera el pulso del transporte aunque tarde más de 400 ms", function () {
+    var e = load();
+    var c = e.ctx;
+    c.density(0);
+    c.tempo(60);
+    c.sync(4);                                  // 1/4 a 60 bpm = 1000 ms
+    c.gridt();
+    e.advance(10); c.bang();
+    e.state().drops = [{ x: 0.5, y: 0.999, vy: 1, s: 0.5 }];
+    e.advance(10); c.bang();
+    for (var i = 0; i < 97; i++) { e.advance(10); c.bang(); }
+    assert.strictEqual(notesOf(e.out).length, 0, "no se adelanta al pulso");
+    e.advance(10); c.gridt();
+    assert.strictEqual(notesOf(e.out).length, 1);
+});
+
+test("volver a Libre para las rejillas y vacía la cola", function () {
+    var e = load();
+    var c = e.ctx;
+    c.density(0);
+    c.sync(1); c.gridt();
     e.advance(10); c.bang();
     e.state().drops = [{ x: 0.5, y: 0.999, vy: 1, s: 0.5 }];
     e.advance(10); c.bang();
     assert.strictEqual(notesOf(e.out).length, 0);
     c.sync(0);
-    assert.deepStrictEqual(outOf(e.out, 2).slice(-1), [[0]], "metro parado");
     assert.strictEqual(notesOf(e.out).length, 1);
 });
 
@@ -338,7 +370,8 @@ test("tick y grid marcados como immediate", function () {
     var e = load();
     assert.strictEqual(e.ctx.bang.immediate, 1);
     assert.strictEqual(e.ctx.tick.immediate, 1);
-    assert.strictEqual(e.ctx.grid.immediate, 1);
+    assert.strictEqual(e.ctx.gridt.immediate, 1);
+    assert.strictEqual(e.ctx.gridf.immediate, 1);
 });
 
 // ---------------------------------------------------------------------------

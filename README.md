@@ -43,7 +43,7 @@ El `.amxd` se genera escribiendo a mano su contenedor binario, y ese formato no 
 
 Las gotas grandes son más gruesas y rápidas, y suenan más fuerte (velocity 30–127). Distance decide la proporción de gotas grandes y pequeñas.
 
-Con **Sync** activo, cuantiza tanto con Live en play como en stop. El motor lee de Live el estado del transporte y el tempo (`live.observer`): en play, la rejilla es la del transporte, alineada al compás; parado, es una rejilla propia al tempo del proyecto (sin compás al que alinearse). Como red de seguridad, si pasan más de 400 ms sin pulsos (o 1,5 veces el intervalo de la rejilla, si es mayor), las notas encoladas suenan igualmente.
+Con **Sync** activo, cuantiza tanto con Live en play como en stop. Hay dos rejillas a la vez: la del transporte (solo da pulsos en play, alineados al compás) y una libre en ms al tempo del proyecto. Mientras llegan pulsos del transporte, mandan ellos; si dejan de llegar (Live parado), manda la libre. El tempo lo lee de Live y, si no llegara, lo mide de los pulsos del transporte. Como red de seguridad, si pasan más de 400 ms sin pulsos (o 1,5 veces el intervalo de la rejilla, si es mayor), las notas encoladas suenan igualmente.
 
 ## Arquitectura
 
@@ -53,8 +53,8 @@ Con **Sync** activo, cuantiza tanto con Live en play como en stop. El motor lee 
 - Salida: motor → `[unpack 0 0 0]` → `[makenote]` → `[pack 0 0]` → `[midiformat]` → `[midiout]`. Al desactivar el dispositivo, `makenote` recibe `stop` y apaga todo lo que suena.
 - Modo Held: `live.tab` Mode → `[sel 0 1]` → `active 0|1` y `textcolor` a Root, Scale, Low y High y a sus nombres, para atenuarlos.
 - Entrada: `[midiin]` → `[midiparse]` → `[prepend note]` → motor. Las notas de entrada no pasan a la salida.
-- Sync: el motor configura un `[metro 16n @quantize 16n]` (`interval`, `quantize`, `1`/`0`) que le devuelve `grid` en cada pulso: en valores de nota con el transporte en marcha, en ms (y sin `quantize`) con el transporte parado.
-- Transporte: `[live.path]` → `[live.observer @property is_playing]` y `[live.observer @property tempo]` → motor (`playing`, `tempo`).
+- Sync: el motor configura dos metros: `[metro 16n @quantize 16n]` (outlet 2, devuelve `gridt`; solo corre con el transporte en marcha) y `[metro 125]` en ms (outlet 4, devuelve `gridf`). `gridf` se ignora mientras lleguen `gridt`.
+- Tempo: `[live.path]` (`path live_set`) → `[live.observer]` (`property tempo`) → motor (`tempo`).
 
 ## Desarrollo
 

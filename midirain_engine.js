@@ -5,23 +5,28 @@
 //
 // Entrada (inlet 0):
 //   bang              tick de simulación (desde [metro 10])
-//   grid              pulso de la rejilla del transporte (desde el metro de sync)
+//   gridt             pulso de la rejilla del transporte (metro en valores de nota: solo
+//                     corre con Live en play y va alineado al compás)
+//   gridf             pulso de la rejilla libre (metro en ms: corre siempre)
 //   note p v          nota de la entrada MIDI (modo MIDI)
-//   playing 0|1       estado del transporte de Live (live.observer is_playing)
-//   tempo bpm         tempo de Live (live.observer tempo)
+//   tempo bpm         tempo de Live (live.observer, property tempo)
 //   density / fall / wind / distance / dur / mode / tonic / scale / low / high / sync <valor>
 // Salida:
 //   outlet 0          pitch velocity duración  ->  [unpack 0 0 0] -> [makenote]
 //   outlet 1          draw <nombreGlobal>      ->  [jsui midirain_ui.js]
-//   outlet 2          control del metro de sync (interval / quantize / 1 / 0):
-//                     con Live en play, rejilla del transporte (16n…, alineada al compás);
-//                     con Live parado, la misma rejilla en ms al tempo del proyecto
+//   outlet 2          control del metro de la rejilla del transporte (interval / quantize / 1 / 0)
 //   outlet 3          texto del valor de cada knob ("density 30 %", "wind 10"…),
 //                     que se muestra debajo del live.dial
+//   outlet 4          control del metro de la rejilla libre (interval en ms / 1 / 0)
+//
+// Sync: las dos rejillas corren a la vez. Si llegan pulsos del transporte, Live
+// está en play y mandan ellos (los de la libre se ignoran); si dejan de llegar,
+// Live está parado y manda la libre, al tempo del proyecto. Así no dependemos de
+// que Live nos diga si está en play.
 
 autowatch = 0;
 inlets = 1;
-outlets = 4;
+outlets = 5;
 
 var MAX_DROPS = 400;
 var MAX_SPLASHES = 160;
@@ -102,8 +107,10 @@ var spawnAcc = 0;
 var lastTick = 0;
 var lastDraw = 0;
 var lastGrid = 0;          // último pulso de rejilla, o el momento en que empezamos a esperarlo
-var transportOn = -1;      // -1 desconocido, 0 parado, 1 en marcha
-var bpm = 120;
+var lastT = 0;             // último pulso de la rejilla del transporte
+var measureOk = false;     // el pulso anterior es del mismo valor de nota: se puede medir el tempo
+var bpm = 120;             // tempo para la rejilla libre
+var bpmFromLive = false;   // si Live nos ha dicho el tempo, manda sobre el medido
 
 function now() {
     return Date.now();
@@ -331,41 +338,56 @@ function tick() {
 }
 tick.immediate = 1;
 
-function grid() {
-    lastGrid = now();
+// pulso de la rejilla del transporte: Live está en play
+function gridt() {
+    var t = now();
+    var dt = t - lastT;
+    if (measureOk && dt > 0 && dt < 4000 && !bpmFromLive) {
+        // sin el tempo de Live, lo deducimos de los propios pulsos (para cuando pare)
+        setBpm(SYNC_BEATS[P.sync] * 60000 / dt);
+    }
+    lastT = t;
+    measureOk = true;
+    lastGrid = t;
     flush();
 }
-grid.immediate = 1;
+gridt.immediate = 1;
 
-function playing(v) {
-    transportOn = Number(v) ? 1 : 0;
-    lastGrid = now();       // espera el primer pulso de la rejilla nueva, como mucho una ventana
-    applyGrid();
+// pulso de la rejilla libre: solo cuenta si no llegan pulsos del transporte
+function gridf() {
+    var t = now();
+    if (lastT && t - lastT <= fallbackWindow()) return;
+    lastGrid = t;
+    flush();
 }
-playing.immediate = 1;
+gridf.immediate = 1;
 
-function tempo(v) {
-    if (!(Number(v) > 0)) return;
-    bpm = Number(v);
-    if (P.sync !== 0 && transportOn !== 1) applyGrid();     // la rejilla en ms sigue al tempo
+// acepta "tempo 120" y también "tempo tempo 120", según cómo lo mande live.observer
+function tempo() {
+    var v = Number(arguments[arguments.length - 1]);
+    if (!(v > 0)) return;
+    bpmFromLive = true;
+    setBpm(v);
 }
 
-// Configura el metro de la rejilla. Con el transporte en marcha usa valores de
-// nota (solo corre en play y va alineado al compás); parado, el mismo intervalo
-// en ms, que corre siempre: así se cuantiza también con Live en stop.
+function setBpm(v) {
+    if (Math.abs(v - bpm) < 0.01) return;
+    bpm = v;
+    if (P.sync !== 0) outlet(4, "interval", gridInterval());   // la rejilla libre sigue al tempo
+}
+
+// Arranca o para las dos rejillas con el valor de Sync elegido
 function applyGrid() {
     if (P.sync === 0) {
         outlet(2, 0);
+        outlet(4, 0);
         return;
     }
-    if (transportOn === 1) {
-        outlet(2, "interval", SYNC_VALUES[P.sync]);
-        outlet(2, "quantize", SYNC_VALUES[P.sync]);
-    } else {
-        outlet(2, "quantize", 0);
-        outlet(2, "interval", gridInterval());
-    }
+    outlet(2, "interval", SYNC_VALUES[P.sync]);
+    outlet(2, "quantize", SYNC_VALUES[P.sync]);
     outlet(2, 1);
+    outlet(4, "interval", gridInterval());
+    outlet(4, 1);
 }
 
 function note(p, v) {
@@ -435,6 +457,7 @@ function sync(v) {
     P.sync = i;
     S.syncLabel = SYNC_LABELS[i];
     lastGrid = now();
+    measureOk = false;      // el valor de nota cambia: no medir el tempo con el pulso anterior
     applyGrid();
     if (i === 0) flush();
 }

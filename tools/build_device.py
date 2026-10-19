@@ -325,26 +325,32 @@ for k in ["l_tonic", "l_scale", "l_low", "l_high"]:
     wire("lbl_on", k)
     wire("lbl_dim", k)
 
-comment("c_sync", "rejilla del transporte (el motor la configura)", [200, 260, 280, 18])
-obj("gridmetro", "metro 16n @quantize 16n", [200, 290, 150, 22], 2, 1, ["bang"])
+# Sync: dos rejillas a la vez, configuradas por el motor.
+#   gridT: valores de nota con quantize -> solo corre con Live en play, alineada al compás
+#   gridF: en ms -> corre siempre; el motor la ignora mientras lleguen pulsos de gridT
+comment("c_sync", "rejillas de sync (el motor las configura)", [200, 260, 260, 18])
+obj("gridT", "metro 16n @quantize 16n", [200, 290, 150, 22], 2, 1, ["bang"])
+msg("gridT_msg", "gridt", [200, 320, 44, 22])
+wire("gridT", "gridT_msg")
+obj("gridF", "metro 125", [260, 350, 70, 22], 2, 1, ["bang"])
+msg("gridF_msg", "gridf", [260, 380, 44, 22])
+wire("gridF", "gridF_msg")
 
-# estado del transporte y tempo de Live: el motor sabe cuándo no van a llegar pulsos
-# y cuánto esperar a cada uno, sin adivinarlo por tiempos
-comment("c_transport", "transporte de Live", [380, 260, 120, 18])
+# tempo de Live, para la rejilla libre (si no llega, el motor lo mide de gridT)
+comment("c_tempo", "tempo de Live", [380, 260, 120, 18])
 msg("lompath", "path live_set", [380, 290, 80, 22])
 obj("lompathobj", "live.path", [380, 320, 70, 22], 1, 3, ["", "", ""])
-obj("obs_playing", "live.observer @property is_playing", [380, 350, 190, 22], 2, 2, ["", ""])
-obj("obs_tempo", "live.observer @property tempo", [580, 350, 170, 22], 2, 2, ["", ""])
-obj("p_playing", "prepend playing", [380, 380, 100, 22], 1, 1)
-obj("p_tempo", "prepend tempo", [580, 380, 90, 22], 1, 1)
-wire("thisdevice", "lompath")
+msg("tempo_prop", "property tempo", [470, 320, 90, 22])
+obj("obs_tempo", "live.observer", [380, 350, 90, 22], 2, 2, ["", ""])
+obj("p_tempo", "prepend tempo", [380, 380, 90, 22], 1, 1)
+obj("tempo_init", "t b b", [380, 230, 40, 22], 1, 2, ["bang", "bang"])
+wire("thisdevice", "tempo_init")
+wire("tempo_init", "tempo_prop", outlet=1)      # primero la propiedad…
+wire("tempo_init", "lompath", outlet=0)         # …y luego el id del set
+wire("tempo_prop", "obs_tempo")
 wire("lompath", "lompathobj")
-wire("lompathobj", "obs_playing", 0, 1)
 wire("lompathobj", "obs_tempo", 0, 1)
-wire("obs_playing", "p_playing")
 wire("obs_tempo", "p_tempo")
-msg("gridmsg", "grid", [200, 320, 40, 22])
-wire("gridmetro", "gridmsg")
 
 comment("c_in", "entrada MIDI: solo notas, no pasan a la salida", [500, 200, 280, 18])
 obj("midiin", "midiin", [500, 220, 50, 22], 1, 1, ["int"])
@@ -353,11 +359,11 @@ obj("p_note", "prepend note", [500, 280, 80, 22], 1, 1)
 wire("midiin", "midiparse")
 wire("midiparse", "p_note", outlet=0)
 
-obj("engine", "js midirain_engine.js ---mr", [20, 420, 420, 22], 1, 4)
+obj("engine", "js midirain_engine.js ---mr", [20, 420, 420, 22], 1, 5)
 wire("tick", "engine")
-wire("gridmsg", "engine")
+wire("gridT_msg", "engine")
+wire("gridF_msg", "engine")
 wire("p_note", "engine")
-wire("p_playing", "engine")
 wire("p_tempo", "engine")
 for ctl, _ in CONTROLS:
     wire("p_" + ctl, "engine")
@@ -370,7 +376,8 @@ for i, k in enumerate(_knobs):
     wire("route_vals", "set_" + k, outlet=i)
     wire("set_" + k, "v_" + k)
 wire("engine", "route_vals", outlet=3)
-wire("engine", "gridmetro", outlet=2)
+wire("engine", "gridT", outlet=2)
+wire("engine", "gridF", outlet=4)
 
 comment("c_out", "salida: makenote siempre manda el note-off", [20, 470, 280, 18])
 obj("unpack", "unpack 0 0 0", [20, 490, 120, 22], 1, 3, ["int", "int", "int"])
