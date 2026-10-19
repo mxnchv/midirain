@@ -47,7 +47,7 @@ Con **Sync** activo, cuantiza tanto con Live en play como en stop. Hay dos rejil
 
 ## Arquitectura
 
-- `midirain_engine.js` corre en `[js midirain_engine.js ---mr]`, movido por un `[metro 10]` que arranca `[live.thisdevice]`. Contiene la simulación, las columnas y la salida de notas. `bang`/`tick`, `grid` y `note` llevan `.immediate = 1`.
+- `midirain_engine.js` corre en `[js midirain_engine.js ---mr]`, movido por un `[metro 10]` que arranca `[live.thisdevice]`. Contiene la simulación, las columnas y la salida de notas. `bang`/`tick`, `gridt`, `gridf` y `note` llevan `.immediate = 1`.
 - `midirain_ui.js` corre en `[jsui]` y solo dibuja. Calcula la posición de cada gota en el instante de pintar, a partir del último paso del motor, para que el movimiento sea continuo. Lee el estado de un `Global` cuyo nombre es único por instancia (`---` se sustituye por un ID) y repinta al recibir `draw <nombreGlobal>`, unos 60 fps. Las notas no dependen nunca del repintado.
 - Valores de los knobs: motor (outlet 3, p. ej. `density 30 %`) → `[route density fall wind distance]` → `[prepend set]` → el texto bajo cada aro.
 - Salida: motor → `[unpack 0 0 0]` → `[makenote]` → `[pack 0 0]` → `[midiformat]` → `[midiout]`. Al desactivar el dispositivo, `makenote` recibe `stop` y apaga todo lo que suena.
