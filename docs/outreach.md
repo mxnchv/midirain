@@ -6,14 +6,14 @@ Textos para que otros enseñen midirain, en inglés. Rellena lo que va entre cor
 
 ## 1. Mensaje a creadores (DM o email)
 
-Corto y personal: nombra algo concreto suyo. Antes, crea en Gumroad un código del 100 % para cada uno
-(Product → Discounts → New discount, 100 %, 1 use), así sabes quién lo usa.
+Corto y personal: nombra algo concreto suyo. Código `RAINFRIENDS`: 100 %, solo midirain, 10 usos.
+Quién lo usa sale en las ventas de Gumroad.
 
 > Hi [name], I'm mxnchv, a sound designer from Madrid. I really liked [specific video/track of theirs].
 >
 > I just released midirain, a Max for Live device where rain plays your notes: each drop that hits the ground triggers a note from a scale, or from the chord you're holding. Here's a 45-second demo: [YouTube link]
 >
-> I'd love for you to have it, no strings attached. Here's a free copy: https://mxnchv.gumroad.com/l/midirain/[CODE]
+> I'd love for you to have it, no strings attached. Here's a free copy: https://mxnchv.gumroad.com/l/midirain/RAINFRIENDS
 >
 > If you end up using it in something, I'd be happy to see it. Thanks!
 
