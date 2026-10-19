@@ -129,7 +129,9 @@
 						169.0
 					],
 					"filename": "midirain_ui.js",
-					"parameter_enable": 0
+					"parameter_enable": 0,
+					"annotation": "Rain falls on invisible columns, one per note. Each drop that hits the ground plays its column's note.",
+					"annotation_name": "midirain"
 				}
 			},
 			{
@@ -196,6 +198,7 @@
 							"parameter_longname": "Density",
 							"parameter_shortname": "Density",
 							"parameter_type": 1,
+							"parameter_info": "How many drops fall per second.",
 							"parameter_mmin": 0.0,
 							"parameter_mmax": 100.0,
 							"parameter_initial": [
@@ -345,6 +348,7 @@
 							"parameter_longname": "Fall",
 							"parameter_shortname": "Fall",
 							"parameter_type": 1,
+							"parameter_info": "How fast the drops fall.",
 							"parameter_mmin": 0.0,
 							"parameter_mmax": 100.0,
 							"parameter_initial": [
@@ -494,6 +498,7 @@
 							"parameter_longname": "Wind",
 							"parameter_shortname": "Wind",
 							"parameter_type": 1,
+							"parameter_info": "Tilts the rain. Drops that leave one side come back on the other.",
 							"parameter_mmin": -100.0,
 							"parameter_mmax": 100.0,
 							"parameter_initial": [
@@ -643,6 +648,7 @@
 							"parameter_longname": "Distance",
 							"parameter_shortname": "Distance",
 							"parameter_type": 1,
+							"parameter_info": "How far away the rain falls. Far rain makes thin, quiet drops; close rain makes big, loud ones. Sets the velocity range.",
 							"parameter_mmin": 0.0,
 							"parameter_mmax": 100.0,
 							"parameter_initial": [
@@ -823,6 +829,7 @@
 							"parameter_longname": "Mode",
 							"parameter_shortname": "Mode",
 							"parameter_type": 2,
+							"parameter_info": "Scale: columns are the notes of the chosen scale between Low and High. Held: columns are the notes you hold on the MIDI input.",
 							"parameter_enum": [
 								"Scale",
 								"Held"
@@ -945,6 +952,7 @@
 							"parameter_longname": "Length",
 							"parameter_shortname": "Length",
 							"parameter_type": 0,
+							"parameter_info": "Duration of each note.",
 							"parameter_mmin": 10.0,
 							"parameter_mmax": 2000.0,
 							"parameter_initial": [
@@ -1055,6 +1063,7 @@
 							"parameter_longname": "Sync",
 							"parameter_shortname": "Sync",
 							"parameter_type": 2,
+							"parameter_info": "Quantizes the impacts to the grid, both while Live is playing and while it is stopped. Free plays each drop the moment it lands. T = triplet.",
 							"parameter_enum": [
 								"Free",
 								"1/32",
@@ -1173,6 +1182,7 @@
 							"parameter_longname": "Root",
 							"parameter_shortname": "Root",
 							"parameter_type": 2,
+							"parameter_info": "Root note of the scale. Scale mode only.",
 							"parameter_enum": [
 								"C",
 								"C#",
@@ -1294,6 +1304,7 @@
 							"parameter_longname": "Scale",
 							"parameter_shortname": "Scale",
 							"parameter_type": 2,
+							"parameter_info": "Scale used for the columns. Scale mode only.",
 							"parameter_enum": [
 								"Major",
 								"Minor",
@@ -1413,6 +1424,7 @@
 							"parameter_longname": "Low",
 							"parameter_shortname": "Low",
 							"parameter_type": 1,
+							"parameter_info": "Lowest note of the column range. Scale mode only.",
 							"parameter_mmin": 0.0,
 							"parameter_mmax": 127.0,
 							"parameter_initial": [
@@ -1521,6 +1533,7 @@
 							"parameter_longname": "High",
 							"parameter_shortname": "High",
 							"parameter_type": 1,
+							"parameter_info": "Highest note of the column range. Scale mode only.",
 							"parameter_mmin": 0.0,
 							"parameter_mmax": 127.0,
 							"parameter_initial": [

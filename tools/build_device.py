@@ -83,6 +83,28 @@ def wire(src, dst, outlet=0, inlet=0):
     }})
 
 
+# textos de la Info View de Live (al pasar el ratón por cada control)
+SCALE_ONLY = " Scale mode only."
+INFO = {
+    "Density": "How many drops fall per second.",
+    "Fall": "How fast the drops fall.",
+    "Wind": "Tilts the rain. Drops that leave one side come back on the other.",
+    "Distance": "How far away the rain falls. Far rain makes thin, quiet drops; close rain "
+                "makes big, loud ones. Sets the velocity range.",
+    "Mode": "Scale: columns are the notes of the chosen scale between Low and High. "
+            "Held: columns are the notes you hold on the MIDI input.",
+    "Length": "Duration of each note.",
+    "Sync": "Quantizes the impacts to the grid, both while Live is playing and while it is "
+            "stopped. Free plays each drop the moment it lands. T = triplet.",
+    "Root": "Root note of the scale." + SCALE_ONLY,
+    "Scale": "Scale used for the columns." + SCALE_ONLY,
+    "Low": "Lowest note of the column range." + SCALE_ONLY,
+    "High": "Highest note of the column range." + SCALE_ONLY,
+}
+RAIN_INFO = ("Rain falls on invisible columns, one per note. "
+             "Each drop that hits the ground plays its column's note.")
+
+
 def param(longname, shortname, ptype, **v):
     """saved_attribute_attributes de un objeto live.*
     ptype: 0 float, 1 int, 2 enum.  unitstyle: 0 int, 1 float, 2 ms, 5 %, 8 MIDI."""
@@ -90,6 +112,7 @@ def param(longname, shortname, ptype, **v):
         "parameter_longname": longname,
         "parameter_shortname": shortname,
         "parameter_type": ptype,
+        "parameter_info": INFO[longname],
     }
     for k, val in v.items():
         valueof["parameter_" + k] = val
@@ -206,7 +229,8 @@ box("sep", "panel", [770, 10, 10, 30], 1, 0, pres=[RAIN_W + 2, 0, 1, DEVICE_H],
     background=1, bgcolor=SEP, border=0, rounded=0, ignoreclick=1)
 
 box("ui", "jsui", [460, 480, RAIN_W, DEVICE_H], 1, 0, pres=[0, 0, RAIN_W, DEVICE_H],
-    filename="midirain_ui.js", parameter_enable=0)
+    filename="midirain_ui.js", parameter_enable=0,
+    annotation=RAIN_INFO, annotation_name="midirain")
 
 # ---------------------------------------------------------------------------
 # controles en dos grupos, separados por una línea:
@@ -419,6 +443,7 @@ def validate():
     names = [b["box"]["saved_attribute_attributes"]["valueof"]["parameter_longname"]
              for b in boxes if b["box"].get("parameter_enable")]
     assert len(names) == len(set(names)), names
+    assert sorted(names) == sorted(INFO), (names, sorted(INFO))
     for b in boxes:
         pr = b["box"].get("presentation_rect")
         if pr:

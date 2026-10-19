@@ -11,6 +11,8 @@ La lluvia ocupa la izquierda (300 px) y los controles la derecha, en dos grupos 
 
 Los knobs son los nativos de Live (`live.dial`) con colores en blanco y gris; el nombre y el valor van como textos aparte, encima y debajo del aro, para dejarles aire (el valor lo formatea el motor: "30 %", "10"). Length es una casilla numérica de tiempo. Los textos usan la fuente de Live.
 
+Cada control tiene su descripción en inglés para la **Info View** de Live (`parameter_info`), y la lluvia también (`annotation`). Están en la tabla `INFO` de `tools/build_device.py`.
+
 ## Instalación
 
 1. Copia en **la misma carpeta** `midirain.amxd`, `midirain_engine.js` y `midirain_ui.js` (por ejemplo `User Library/Presets/MIDI Effects/Max MIDI Effect/midirain/`).
