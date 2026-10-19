@@ -12,25 +12,25 @@ var OUT = path.join(__dirname, '..', 'promo');
 var FPS = 30;
 var DENSITY = 'density=55';
 
-// rótulo encima de la escena, con la tipografía de mxnchv.xyz
+// rótulo encima de la escena, en Jost (la tipografía del plugin)
 function overlay(opts) {
     var link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = 'https://fonts.googleapis.com/css2?family=Space+Mono&display=swap';
+    link.href = 'https://fonts.googleapis.com/css2?family=Jost:wght@300;400&display=swap';
     document.head.appendChild(link);
     var css = document.createElement('style');
     css.textContent =
         '.promo { position: fixed; left: 0; right: 0; top: ' + opts.top + 'px; text-align: center; pointer-events: none;' +
-        ' font-family: "Space Mono", monospace; color: #fff; }' +
-        '.promo b { display: block; font-weight: 400; font-size: ' + opts.size + 'px; letter-spacing: 0.04em; }' +
-        '.promo i { display: block; font-style: normal; font-size: ' + opts.sub + 'px; opacity: 0.5; letter-spacing: 0.08em; margin-top: 4px; }' +
+        ' font-family: "Jost", sans-serif; color: #fff; }' +
+        '.promo b { display: block; font-weight: 400; font-size: ' + opts.size + 'px; letter-spacing: 0.02em; }' +
+        '.promo i { display: block; font-style: normal; font-weight: 300; font-size: ' + opts.sub + 'px; opacity: 0.55; letter-spacing: 0.12em; margin-top: 2px; }' +
         (opts.device ? 'body { background: #000; } .log { display: none; } .device { outline: 0; margin-top: ' + opts.device + 'px; }' : '');
     document.head.appendChild(css);
     var d = document.createElement('div');
     d.className = 'promo';
     d.innerHTML = '<b>midirain</b>' + (opts.caption ? '<i>' + opts.caption + '</i>' : '');
     document.body.appendChild(d);
-    return document.fonts.load(opts.size + 'px "Space Mono"');
+    return Promise.all([document.fonts.load('400 ' + opts.size + 'px "Jost"'), document.fonts.load('300 ' + (opts.sub || 8) + 'px "Jost"')]);
 }
 
 async function frames(browser, name, o) {
