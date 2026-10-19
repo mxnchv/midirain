@@ -1,8 +1,11 @@
 # Gumroad
 
 Ficha de la tienda (en inglés). Precio: pay what you want, mínimo 5 €, sugerido 10 €.
-Imágenes: `promo/cover-a.gif` o `promo/cover-b.gif` (portada, 1280×720; hay `.mp4` de cada una) y
-`promo/thumbnail.png` (miniatura, 600×600). Se regeneran con `node tools/promo.js`.
+Imágenes (se regeneran con `node tools/promo.js`; todas en Jost):
+1. Portada: `promo/cover-a.gif` (1280×720, lluvia a pantalla completa).
+2. Segunda imagen de la galería: `promo/cover-b.gif` (el dispositivo). Sale de la preview del navegador;
+   cuando haya una grabación de pantalla de Live, mejor esa.
+3. Miniatura: `promo/thumbnail.png` (600×600).
 
 ---
 
