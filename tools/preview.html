@@ -32,6 +32,9 @@
   .tabs button.on { background: #fff; color: #000; }
   .log { position: fixed; bottom: 12px; left: 16px; right: 16px; font-size: 10px;
          color: var(--grey-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  body.rainonly { padding: 0; display: block; background: #000; }
+  body.rainonly .device { width: auto; height: auto; outline: 0; transform: none !important; }
+  body.rainonly .sep, body.rainonly #panel, body.rainonly .log { display: none; }
   @media (max-width: 640px) { .device { transform: scale(0.6); transform-origin: center; } }
 </style>
 </head>
@@ -44,7 +47,16 @@
 <div class="log" id="log">—</div>
 <script>
 (async function () {
-  var W = 300, H = 169, DPR = 3;
+  // ?rain=320x180&dpr=4&density=45 → solo la lluvia, a ese tamaño (para tools/promo.js)
+  var Q = new URLSearchParams(location.search);
+  var RAIN = (Q.get('rain') || '').split('x').map(Number);
+  var W = RAIN[0] || 300, H = RAIN[1] || 169, DPR = +Q.get('dpr') || 3;
+  if (RAIN[0]) {
+    document.body.classList.add('rainonly');
+    var c0 = document.getElementById('c');
+    c0.width = W * DPR; c0.height = H * DPR;
+    c0.style.width = W + 'px'; c0.style.height = H + 'px';
+  }
   var globals = {};
   function Global(name) { return globals[name] || (globals[name] = {}); }
 
@@ -275,6 +287,8 @@
   scaleOnly.push(number('Low', NX, NROWS[3] + 14, 48, function (v) { engine.low(v); }));
   scaleOnly.push(number('High', NX + 70, NROWS[3] + 14, 72, function (v) { engine.high(v); }));
   var credit = place(document.createElement('div'), 610 - 16 - 30, 153); credit.className = 'credit'; credit.textContent = 'mxnchv';
+
+  ['density', 'fall', 'wind', 'distance'].forEach(function (k) { if (Q.get(k) !== null) engine[k](+Q.get(k)); });
 
   window.midirain = { engine: engine, ui: ui, knobs: knobs, globals: globals };
 
