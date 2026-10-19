@@ -7,6 +7,9 @@ Imágenes (se regeneran con `node tools/promo.js`; todas en Jost):
    cuando haya una grabación de pantalla de Live, mejor esa.
 3. Miniatura: `promo/thumbnail.png` (600×600).
 
+Fondos para vídeo (`node tools/promo.js bg`): `promo/bg-1920x1080.mp4` y `promo/bg-1080x1920.mp4`,
+12 s a 60 fps, sin rótulo, en bucle sin corte (los 2 últimos segundos se funden con el principio).
+
 ---
 
 **Product name**
