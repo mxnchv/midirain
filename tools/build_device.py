@@ -255,7 +255,7 @@ numbox("dur", "dur", "Length", 150, [620, 60, 64, 15], [NX, y + 14, 64, 15],
 CONTROLS.append(("dur", "dur"))
 
 label("l_sync", "Sync", NX + 70, y)
-menu("sync", "sync", "Sync", ["Free", "1/32", "1/16", "1/8", "1/4"], 0,
+menu("sync", "sync", "Sync", ["Free", "1/32", "1/16T", "1/16", "1/8T", "1/8", "1/4T", "1/4", "1/2"], 0,
      [340, 30, 64, 15], [NX + 70, y + 14, 64, 15])
 CONTROLS.append(("sync", "sync"))
 

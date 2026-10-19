@@ -1058,11 +1058,15 @@
 							"parameter_enum": [
 								"Free",
 								"1/32",
+								"1/16T",
 								"1/16",
+								"1/8T",
 								"1/8",
-								"1/4"
+								"1/4T",
+								"1/4",
+								"1/2"
 							],
-							"parameter_mmax": 4.0,
+							"parameter_mmax": 8.0,
 							"parameter_initial": [
 								0.0
 							],

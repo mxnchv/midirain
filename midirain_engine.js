@@ -54,9 +54,10 @@ var SCALES = [
 ];
 
 // índice del menú Sync -> valor de nota para el metro tempo-relativo
-var SYNC_VALUES = [null, "32n", "16n", "8n", "4n"];
-var SYNC_LABELS = ["Free", "1/32", "1/16", "1/8", "1/4"];
-var SYNC_BEATS = [0, 0.125, 0.25, 0.5, 1];
+// mismo orden que Live; la T es tresillo
+var SYNC_VALUES = [null, "32n", "16nt", "16n", "8nt", "8n", "4nt", "4n", "2n"];
+var SYNC_LABELS = ["Free", "1/32", "1/16T", "1/16", "1/8T", "1/8", "1/4T", "1/4", "1/2"];
+var SYNC_BEATS = [0, 1 / 8, 1 / 6, 1 / 4, 1 / 3, 1 / 2, 2 / 3, 1, 2];
 
 // ---------------------------------------------------------------------------
 // Global compartido con la UI. M4L sustituye "---" por un ID único por instancia;
@@ -261,12 +262,20 @@ function impact(x, s, t) {
     }
     if (!n) return;     // modo MIDI sin notas: llueve pero no suena
     c = Math.min(n - 1, Math.floor(x * n));
-    v = clamp(Math.round(30 + 97 * s), 1, 127);
+    v = velocityFor(s);
     if (P.sync === 0) {
         play(S.cols[c], v, t);
     } else {
         enqueue(S.cols[c], v);
     }
+}
+
+// Velocity según el tamaño de la gota. El tamaño sale de random^exp (ver
+// sizeExponent), así que s^(1/1.7) devuelve a un reparto uniforme con Distance
+// al 50 %: velocities parejas entre 30 y 127, sin amontonarse en el mínimo.
+// Distance lo inclina hacia notas suaves (lejos) o fuertes (cerca).
+function velocityFor(s) {
+    return clamp(Math.round(30 + 97 * Math.pow(s, 1 / 1.7)), 1, 127);
 }
 
 function enqueue(p, v) {

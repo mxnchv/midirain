@@ -169,7 +169,7 @@ test("sync: arranca las dos rejillas (transporte en valores de nota, libre en ms
     var e = load();
     var c = e.ctx;
     c.tempo(120);
-    c.sync(2);                                  // 1/16 a 120 bpm = 125 ms
+    c.sync(3);                                  // 1/16 a 120 bpm = 125 ms
     assert.deepStrictEqual(outOf(e.out, 2).slice(-3), [["interval", "16n"], ["quantize", "16n"], [1]]);
     assert.deepStrictEqual(outOf(e.out, 4).slice(-2), [["interval", 125], [1]]);
     c.sync(0);
@@ -181,7 +181,7 @@ test("sync en play: los impactos se encolan y suenan en el pulso del transporte"
     var e = load();
     var c = e.ctx;
     c.density(0);
-    c.sync(2);
+    c.sync(3);
     c.gridt();
     e.advance(10); c.bang();
     e.state().drops = [
@@ -195,7 +195,7 @@ test("sync en play: los impactos se encolan y suenan en el pulso del transporte"
     var n = notesOf(e.out);
     assert.strictEqual(n.length, 2);
     assert.strictEqual(n[0][0], 48);
-    assert.strictEqual(n[0][1], Math.round(30 + 97 * 0.9));
+    assert.strictEqual(n[0][1], Math.round(30 + 97 * Math.pow(0.9, 1 / 1.7)));
     assert.strictEqual(n[1][0], 72);
 });
 
@@ -204,7 +204,7 @@ test("sync en play: los pulsos de la rejilla libre se ignoran (no desalinean)", 
     var c = e.ctx;
     c.density(0);
     c.tempo(120);
-    c.sync(3);                                  // 1/8 a 120 bpm = 250 ms
+    c.sync(5);                                  // 1/8 a 120 bpm = 250 ms
     c.gridt();
     e.advance(10); c.bang();
     e.state().drops = [{ x: 0.5, y: 0.999, vy: 1, s: 0.5 }];
@@ -219,7 +219,7 @@ test("sync parado: sin pulsos del transporte, manda la rejilla libre", function 
     var e = load();
     var c = e.ctx;
     c.density(0);
-    c.sync(2);
+    c.sync(3);
     c.gridf();
     e.advance(10); c.bang();
     e.state().drops = [{ x: 0.5, y: 0.999, vy: 1, s: 0.5 }];
@@ -234,7 +234,7 @@ test("al parar Live, la rejilla libre toma el relevo pasada la ventana", functio
     var c = e.ctx;
     c.density(0);
     c.tempo(120);
-    c.sync(3);                                  // 250 ms; ventana = 400 ms
+    c.sync(5);                                  // 1/8: 250 ms; ventana = 400 ms
     c.gridt();                                  // último pulso del transporte: Live para
     e.advance(10); c.bang();
     e.state().drops = [{ x: 0.5, y: 0.999, vy: 1, s: 0.5 }];
@@ -248,7 +248,7 @@ test("al parar Live, la rejilla libre toma el relevo pasada la ventana", functio
 test("sync: el tempo de Live ajusta la rejilla libre", function () {
     var e = load();
     var c = e.ctx;
-    c.sync(2);
+    c.sync(3);
     c.tempo(60);
     assert.deepStrictEqual(outOf(e.out, 4).slice(-1), [["interval", 250]], "1/16 a 60 bpm");
     c.tempo("tempo", 30);                       // con el nombre de la propiedad delante
@@ -258,12 +258,12 @@ test("sync: el tempo de Live ajusta la rejilla libre", function () {
 test("sync: sin el tempo de Live, lo mide de los pulsos del transporte", function () {
     var e = load();
     var c = e.ctx;
-    c.sync(3);                                  // 1/8
+    c.sync(5);                                  // 1/8
     c.gridt(); e.advance(500); c.gridt();       // un 1/8 cada 500 ms = 60 bpm
     assert.deepStrictEqual(outOf(e.out, 4).slice(-1), [["interval", 500]]);
     var f = load();
     f.ctx.tempo(90);                            // si Live da el tempo, manda ese
-    f.ctx.sync(3);
+    f.ctx.sync(5);
     f.ctx.gridt(); f.advance(500); f.ctx.gridt();
     assert.deepStrictEqual(outOf(f.out, 4).slice(-1), [[1]], "no cambia el intervalo por la medida");
 });
@@ -272,7 +272,7 @@ test("sync: sin pulsos de ninguna rejilla durante más de 400 ms, suena igualmen
     var e = load();
     var c = e.ctx;
     c.density(0);
-    c.sync(3);
+    c.sync(5);
     c.gridt();
     e.advance(10); c.bang();
     e.state().drops = [{ x: 0.5, y: 0.999, vy: 1, s: 0.5 }];
@@ -288,7 +288,7 @@ test("sync lento: espera el pulso del transporte aunque tarde más de 400 ms", f
     var c = e.ctx;
     c.density(0);
     c.tempo(60);
-    c.sync(4);                                  // 1/4 a 60 bpm = 1000 ms
+    c.sync(7);                                  // 1/4 a 60 bpm = 1000 ms
     c.gridt();
     e.advance(10); c.bang();
     e.state().drops = [{ x: 0.5, y: 0.999, vy: 1, s: 0.5 }];
@@ -364,6 +364,35 @@ test("Distance: al 50 % el reparto de tamaños de siempre; más lejos, gotas má
     var seed = 12345, r = function () { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
     var e = load({ random: r });
     assert.ok(Math.abs(e.ctx.sizeExponent() - 1.7) < 1e-12);
+});
+
+test("Sync: tresillos y 1/2, en el orden de Live", function () {
+    var e = load();
+    var c = e.ctx;
+    c.tempo(120);
+    var want = [[1, "32n", 62.5], [2, "16nt", 1000 / 12], [3, "16n", 125], [4, "8nt", 500 / 3],
+                [5, "8n", 250], [6, "4nt", 1000 / 3], [7, "4n", 500], [8, "2n", 1000]];
+    want.forEach(function (w) {
+        c.sync(w[0]);
+        assert.deepStrictEqual(outOf(e.out, 2).slice(-3)[0], ["interval", w[1]]);
+        assert.ok(Math.abs(outOf(e.out, 4).slice(-2)[0][1] - w[2]) < 1e-9, w[1]);
+    });
+});
+
+test("velocity: con Distance al 50 %, repartida de forma pareja entre 30 y 127", function () {
+    var seed = 777;
+    var e = load({ random: function () { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; } });
+    var c = e.ctx;
+    c.fall(0); c.density(100);
+    e.advance(10); c.bang();
+    for (var i = 0; i < 700; i++) { e.advance(10); c.bang(); }   // ~400 gotas (el tope)
+    var v = Array.from(e.state().drops, function (d) { return c.velocityFor(d.s); });
+    var low = v.filter(function (x) { return x <= 35; }).length / v.length;
+    var mean = v.reduce(function (a, b) { return a + b; }, 0) / v.length;
+    assert.ok(low < 0.1, "pocas notas en el mínimo: " + (low * 100).toFixed(1) + " %");
+    assert.ok(mean > 70 && mean < 87, "media cerca del centro (78,5): " + mean.toFixed(1));
+    assert.strictEqual(c.velocityFor(0), 30);
+    assert.strictEqual(c.velocityFor(1), 127);
 });
 
 test("tick y grid marcados como immediate", function () {

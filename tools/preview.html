@@ -268,7 +268,7 @@
   });
   var len = number('Length', NX, NROWS[1] + 14, 150, function (v) { engine.dur(v); });
   len.min = 10; len.max = 2000;   // en Live es una casilla de tiempo ("150 ms")
-  select('Sync', NX + 70, NROWS[1] + 14, 64, ['Free', '1/32', '1/16', '1/8', '1/4'], 0, function (i) { engine.sync(i); });
+  select('Sync', NX + 70, NROWS[1] + 14, 64, ['Free', '1/32', '1/16T', '1/16', '1/8T', '1/8', '1/4T', '1/4', '1/2'], 0, function (i) { engine.sync(i); });
   scaleOnly.push(select('Root', NX, NROWS[2] + 14, 40, NN, 0, function (i) { engine.tonic(i); }));
   scaleOnly.push(select('Scale', NX + 46, NROWS[2] + 14, 88, ['Major', 'Minor', 'Dorian', 'Phrygian', 'Lydian', 'Mixolydian', 'Harmonic Minor',
     'Major Pentatonic', 'Minor Pentatonic', 'Blues', 'Chromatic'], 1, function (i) { engine.scale(i); }));

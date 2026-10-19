@@ -39,9 +39,9 @@ El `.amxd` se genera escribiendo a mano su contenedor binario, y ese formato no 
 | Mode | Scale / Held | **Scale**: las columnas son las notas de la escala dentro del rango. **Held**: las columnas son las notas que mantienes pulsadas en la entrada MIDI, de grave a agudo. Sin notas pulsadas, llueve pero no suena |
 | Root, Scale | | Major, Minor, Dorian, Phrygian, Lydian, Mixolydian, Harmonic Minor, Major/Minor Pentatonic, Blues, Chromatic |
 | Low / High | nota MIDI | rango de las columnas en modo Scale (C3 = 60) |
-| Sync | Free, 1/32 … 1/4 | encola los impactos y los dispara en el siguiente pulso del transporte |
+| Sync | Free, 1/32, 1/16T, 1/16, 1/8T, 1/8, 1/4T, 1/4, 1/2 | encola los impactos y los dispara en el siguiente pulso de la rejilla (T = tresillo) |
 
-Las gotas grandes son más gruesas y rápidas, y suenan más fuerte (velocity 30–127). Distance decide la proporción de gotas grandes y pequeñas.
+Las gotas grandes son más gruesas y rápidas, y suenan más fuerte (velocity 30–127). Con Distance al 50 %, las velocities quedan repartidas de forma pareja entre 30 y 127; Distance las inclina hacia notas suaves (lejos) o fuertes (cerca).
 
 Con **Sync** activo, cuantiza tanto con Live en play como en stop. Hay dos rejillas a la vez: la del transporte (solo da pulsos en play, alineados al compás) y una libre en ms al tempo del proyecto. Mientras llegan pulsos del transporte, mandan ellos; si dejan de llegar (Live parado), manda la libre. El tempo lo lee de Live y, si no llegara, lo mide de los pulsos del transporte. Como red de seguridad, si pasan más de 400 ms sin pulsos (o 1,5 veces el intervalo de la rejilla, si es mayor), las notas encoladas suenan igualmente.
 
