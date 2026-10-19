@@ -5,7 +5,7 @@ Imágenes (se regeneran con `node tools/promo.js`; todas en Jost):
 1. Portada: `promo/cover-a.gif` (1280×720, lluvia a pantalla completa).
 2. Segunda imagen de la galería: `promo/cover-b.gif` (el dispositivo). Sale de la preview del navegador;
    cuando haya una grabación de pantalla de Live, mejor esa.
-3. Miniatura: `promo/thumbnail.png` (600×600).
+3. Miniatura: `promo/thumbnail.png` (1200×1200, mismo sistema que las portadas de los sample packs: negro, tipo de producto y "mxnchv" arriba, nombre en Jost en el centro).
 
 Fondos para vídeo (`node tools/promo.js bg`): `promo/bg-1920x1080.mp4` y `promo/bg-1080x1920.mp4`,
 12 s a 60 fps, sin rótulo, en bucle sin corte (los 2 últimos segundos se funden con el principio).
