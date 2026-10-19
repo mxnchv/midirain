@@ -34,14 +34,14 @@ El `.amxd` se genera escribiendo a mano su contenedor binario, y ese formato no 
 | Density | 0–100 % | gotas por segundo, en curva cuadrática (~60/s al 100 %) |
 | Fall | 0–100 % | velocidad de caída |
 | Wind | -100–100 | inclina la lluvia (10 por defecto); lo que sale por un lado entra por el otro |
-| Distance | 0–100 % | lo lejos que cae la lluvia: más arriba, gotas más finas y tenues que suenan más suave; más abajo, goterones que suenan fuerte. Al 50 % (por defecto), el reparto de siempre |
+| Distance | 0–100 % | lo lejos que cae la lluvia: más arriba, gotas más finas y tenues que suenan más suave; más abajo, goterones que suenan fuerte. Velocities: 39–127 cerca, 20–108 al 50 % (por defecto), 1–89 lejos |
 | Length | 10–2000 ms | duración de cada nota (exponencial) |
 | Mode | Scale / Held | **Scale**: las columnas son las notas de la escala dentro del rango. **Held**: las columnas son las notas que mantienes pulsadas en la entrada MIDI, de grave a agudo. Sin notas pulsadas, llueve pero no suena |
 | Root, Scale | | Major, Minor, Dorian, Phrygian, Lydian, Mixolydian, Harmonic Minor, Major/Minor Pentatonic, Blues, Chromatic |
 | Low / High | nota MIDI | rango de las columnas en modo Scale (C3 = 60) |
 | Sync | Free, 1/32, 1/16T, 1/16, 1/8T, 1/8, 1/4T, 1/4, 1/2 | encola los impactos y los dispara en el siguiente pulso de la rejilla (T = tresillo) |
 
-Las gotas grandes son más gruesas y rápidas, y suenan más fuerte (velocity 30–127). Con Distance al 50 %, las velocities quedan repartidas de forma pareja entre 30 y 127; Distance las inclina hacia notas suaves (lejos) o fuertes (cerca).
+Las gotas grandes son más gruesas y rápidas, y suenan más fuerte. Distance desplaza una ventana de 88 valores de velocity dentro de 1–127, y cada gota cae en ella según lo cerca que esté: aunque la lluvia esté lejos, las gotas siguen a distancias distintas y no se amontonan en el mínimo.
 
 Con **Sync** activo, cuantiza tanto con Live en play como en stop. Hay dos rejillas a la vez: la del transporte (solo da pulsos en play, alineados al compás) y una libre en ms al tempo del proyecto. Mientras llegan pulsos del transporte, mandan ellos; si dejan de llegar (Live parado), manda la libre. El tempo lo lee de Live y, si no llegara, lo mide de los pulsos del transporte. Como red de seguridad, si pasan más de 400 ms sin pulsos (o 1,5 veces el intervalo de la rejilla, si es mayor), las notas encoladas suenan igualmente.
 

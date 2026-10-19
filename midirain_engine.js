@@ -206,12 +206,14 @@ function sizeExponent() {
 }
 
 function spawnDrop() {
-    var s = Math.pow(Math.random(), sizeExponent());
+    var r = Math.random();                  // lo cerca que cae la gota dentro de la lluvia (0 lejos, 1 cerca)
+    var s = Math.pow(r, sizeExponent());
     return {
         x: Math.random(),
         y: -Math.random() * 0.08,
         vy: baseSpeed() * (0.75 + 0.6 * s),
-        s: s
+        s: s,
+        r: r
     };
 }
 
@@ -227,7 +229,7 @@ function step(dt, t) {
         x = d.x + windN * WIND_SLOPE * d.vy * dt;
         d.x = x - Math.floor(x);    // lo que sale por un lado entra por el otro
         if (d.y >= 1) {
-            impact(d.x, d.s, t);
+            impact(d.x, d.s, t, d.r);
         } else {
             drops.push(d);
         }
@@ -254,7 +256,7 @@ function step(dt, t) {
     }
 }
 
-function impact(x, s, t) {
+function impact(x, s, t, r) {
     var n = S.cols.length;
     var c, v;
     if (S.splashes.length < MAX_SPLASHES) {
@@ -262,7 +264,8 @@ function impact(x, s, t) {
     }
     if (!n) return;     // modo MIDI sin notas: llueve pero no suena
     c = Math.min(n - 1, Math.floor(x * n));
-    v = velocityFor(s);
+    if (r === undefined) r = Math.pow(s, 1 / sizeExponent());   // gota sin posición guardada
+    v = velocityFor(r);
     if (P.sync === 0) {
         play(S.cols[c], v, t);
     } else {
@@ -270,12 +273,17 @@ function impact(x, s, t) {
     }
 }
 
-// Velocity según el tamaño de la gota. El tamaño sale de random^exp (ver
-// sizeExponent), así que s^(1/1.7) devuelve a un reparto uniforme con Distance
-// al 50 %: velocities parejas entre 30 y 127, sin amontonarse en el mínimo.
-// Distance lo inclina hacia notas suaves (lejos) o fuertes (cerca).
-function velocityFor(s) {
-    return clamp(Math.round(30 + 97 * Math.pow(s, 1 / 1.7)), 1, 127);
+// Velocity: Distance desplaza una ventana de VEL_WINDOW valores dentro de 1..127
+// (cerca 39..127, 50 % 20..108, lejos 1..89) y cada gota cae en ella según su
+// posición r, de forma pareja: aunque la lluvia esté lejos, cada gota sigue a su
+// propia distancia y no se amontonan en el mínimo. Más grande = más fuerte.
+var VEL_MIN = 1;
+var VEL_MAX = 127;
+var VEL_WINDOW = 88;
+
+function velocityFor(r) {
+    var lo = VEL_MIN + (VEL_MAX - VEL_MIN - VEL_WINDOW) * (1 - P.distance / 100);   // 0 % = cerca = ventana arriba
+    return clamp(Math.round(lo + VEL_WINDOW * clamp(r, 0, 1)), VEL_MIN, VEL_MAX);
 }
 
 function enqueue(p, v) {

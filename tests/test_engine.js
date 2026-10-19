@@ -118,8 +118,8 @@ test("impacto: columna según x, velocity según tamaño, duración del dial", f
     c.density(0);
     e.advance(10); c.bang(); e.advance(10); c.bang();
     var n = notesOf(e.out);
-    assert.deepStrictEqual(n[0], [48, 30, 250]);
-    assert.deepStrictEqual(n[1], [72, 127, 250]);
+    assert.deepStrictEqual(n[0], [48, 20, 250]);    // Distance 50 %: ventana 20–108
+    assert.deepStrictEqual(n[1], [72, 108, 250]);
     assert.ok(e.state().flashT[0] > 0 && e.state().flashT[14] > 0);
 });
 
@@ -195,7 +195,7 @@ test("sync en play: los impactos se encolan y suenan en el pulso del transporte"
     var n = notesOf(e.out);
     assert.strictEqual(n.length, 2);
     assert.strictEqual(n[0][0], 48);
-    assert.strictEqual(n[0][1], Math.round(30 + 97 * Math.pow(0.9, 1 / 1.7)));
+    assert.strictEqual(n[0][1], Math.round(20 + 88 * Math.pow(0.9, 1 / 1.7)));
     assert.strictEqual(n[1][0], 72);
 });
 
@@ -379,20 +379,36 @@ test("Sync: tresillos y 1/2, en el orden de Live", function () {
     });
 });
 
-test("velocity: con Distance al 50 %, repartida de forma pareja entre 30 y 127", function () {
-    var seed = 777;
-    var e = load({ random: function () { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; } });
+test("velocity: ventana que mueve Distance, sin amontonarse en el mínimo", function () {
+    function velocities(dist) {
+        var seed = 777;
+        var e = load({ random: function () { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; } });
+        var c = e.ctx;
+        c.fall(0); c.distance(dist); c.density(100);
+        e.advance(10); c.bang();
+        for (var i = 0; i < 700; i++) { e.advance(10); c.bang(); }   // ~400 gotas (el tope)
+        return Array.from(e.state().drops, function (d) { return c.velocityFor(d.r); });
+    }
+    [[0, 39, 127], [50, 20, 108], [100, 1, 89]].forEach(function (w) {
+        var v = velocities(w[0]);
+        var lo = Math.min.apply(null, v), hi = Math.max.apply(null, v);
+        var nearMin = v.filter(function (x) { return x <= w[1] + 4; }).length / v.length;
+        assert.ok(lo >= w[1] && hi <= w[2], "Distance " + w[0] + ": " + lo + "–" + hi);
+        assert.ok(hi - lo > 80, "usa toda la ventana: " + lo + "–" + hi);
+        assert.ok(nearMin < 0.1, "Distance " + w[0] + ": " + (nearMin * 100).toFixed(1) + " % junto al mínimo");
+    });
+});
+
+test("velocity: la gota más grande suena más fuerte", function () {
+    var e = load();
     var c = e.ctx;
-    c.fall(0); c.density(100);
-    e.advance(10); c.bang();
-    for (var i = 0; i < 700; i++) { e.advance(10); c.bang(); }   // ~400 gotas (el tope)
-    var v = Array.from(e.state().drops, function (d) { return c.velocityFor(d.s); });
-    var low = v.filter(function (x) { return x <= 35; }).length / v.length;
-    var mean = v.reduce(function (a, b) { return a + b; }, 0) / v.length;
-    assert.ok(low < 0.1, "pocas notas en el mínimo: " + (low * 100).toFixed(1) + " %");
-    assert.ok(mean > 70 && mean < 87, "media cerca del centro (78,5): " + mean.toFixed(1));
-    assert.strictEqual(c.velocityFor(0), 30);
+    assert.ok(c.velocityFor(0.9) > c.velocityFor(0.2));
+    assert.strictEqual(c.velocityFor(0), 20);
+    assert.strictEqual(c.velocityFor(1), 108);
+    c.distance(0);
     assert.strictEqual(c.velocityFor(1), 127);
+    c.distance(100);
+    assert.strictEqual(c.velocityFor(0), 1);
 });
 
 test("tick y grid marcados como immediate", function () {
