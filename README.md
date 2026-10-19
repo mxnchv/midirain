@@ -67,3 +67,7 @@ python3 -m http.server            # y abre http://localhost:8000/tools/preview.h
 ```
 
 `tools/preview.html` ejecuta los dos `.js` tal cual en el navegador, con un canvas que imita mgraphics. Sirve para ver la lluvia sin abrir Live. No tiene audio.
+
+`tools/promo.js` genera las portadas y los fondos en bucle de `promo/` a partir de la preview.
+
+La demo de la web (mxnchv.xyz/midirain, en Lab) usa una copia de `midirain_engine.js` y `midirain_ui.js` en `vendor/midirain/` del repo mxnchv/mxnchv.xyz. Si cambias cómo se comporta o se dibuja la lluvia, cópialos allí otra vez.
