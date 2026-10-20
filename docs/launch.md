@@ -130,3 +130,53 @@ Lee antes las normas de r/ableton sobre autopromoción. Sube el vídeo al post e
 > I built it because I wanted something generative that feels physical rather than random. You can play with it in the browser: https://mxnchv.xyz/midirain
 >
 > It's pay what you want, from €5. Happy to hear ideas for what to add next.
+
+---
+
+## 7. KVR Audio
+
+1. Cuenta de desarrollador (gratis): `kvraudio.com/developer_application.php`. Developer name: mxnchv · Website: https://mxnchv.xyz · Country: Spain.
+
+   > mxnchv is a sound designer based in Madrid making sound for brands, games and content, and small music tools. First release: midirain, a generative Max for Live MIDI effect.
+
+2. Ficha del producto (KVR quita el lenguaje de marketing: descriptivo y sin adjetivos). Enlace: `https://mxnchv.gumroad.com/l/midirain?utm_source=kvr`.
+
+   **Short description:** Generative MIDI effect for Ableton Live 12 where falling rain triggers notes.
+
+   > midirain is a Max for Live MIDI effect for Ableton Live 12. Rain falls on invisible columns; each column is a note, and each drop that reaches the ground plays it.
+   >
+   > Features:
+   > - Density, Fall and Wind control how much it rains, how fast and at what angle.
+   > - Distance sets the velocity range: distant rain produces quiet notes, close rain loud ones.
+   > - Scale mode: columns follow one of 11 scales within a set note range.
+   > - Held mode: columns follow the notes held on the MIDI input.
+   > - Sync quantizes impacts to the grid from 1/32 to 1/2, including triplets, with the transport playing or stopped.
+   > - Length sets the note duration.
+   > - All controls are described in Live's Info View.
+   >
+   > Supplied as a single frozen .amxd file. A browser demo is available at https://mxnchv.xyz/midirain.
+
+3. Noticia (opcional, una por producto): la nota de prensa de `docs/outreach.md` §2 sin saludo ni despedida.
+
+---
+
+## 8. LinkedIn
+
+Sube el vídeo horizontal directamente (no un enlace de YouTube) y pon los enlaces en el primer comentario.
+
+> I made a musical instrument out of rain. 🌧️
+>
+> midirain is a Max for Live device for Ableton Live: rain falls on invisible columns, each column is a note, and every drop that hits the ground plays it. You don't write the melody, you set the weather: how much it rains, how fast, the wind, how far away the storm is.
+>
+> I built it the way I approach sound design: start from a physical idea, make it feel alive, then make it simple to play with. It runs in Live, and there's a version you can play in your browser.
+>
+> I also build custom tools like this (Max for Live devices and interactive sound for web, games and installations), so if you're working on something that needs its own sound, I'd love to hear about it.
+>
+> Links in the first comment 👇
+>
+> #sounddesign #ableton #maxforlive #generativemusic #interactiveaudio #musictech
+
+**Primer comentario:**
+
+> Try it in the browser: https://mxnchv.xyz/midirain
+> Get it (pay what you want, from €5): https://mxnchv.gumroad.com/l/midirain?utm_source=linkedin
