@@ -170,7 +170,7 @@ Sube el vídeo horizontal directamente (no un enlace de YouTube) y pon los enlac
 >
 > I built it the way I approach sound design: start from a physical idea, make it feel alive, then make it simple to play with. It runs in Live, and there's a version you can play in your browser.
 >
-> I also build custom tools like this (Max for Live devices and interactive sound for web, games and installations), so if you're working on something that needs its own sound, I'd love to hear about it.
+> A VST3/AU version for other DAWs is coming soon, free for everyone who gets the Max for Live one.
 >
 > Links in the first comment 👇
 >
